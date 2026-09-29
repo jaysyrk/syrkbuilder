@@ -89,6 +89,9 @@ final class EditorScreen extends Screen {
     private static String modelSize = "48";
     private static String heightmapHeight = "";
     private static String touchRadius = "12";
+    private static final String[] BIOMES = {"plains", "forest", "birch_forest", "dark_forest", "cherry_grove", "meadow", "taiga", "snowy_plains",
+        "desert", "badlands", "savanna", "jungle", "swamp", "mangrove_swamp", "mushroom_fields", "pale_garden", "beach", "ocean"};
+    private static int biomeIndex;
     private static String textWords = "";
     private static String textSize = "1";
     private static boolean textFlat;
@@ -553,6 +556,11 @@ final class EditorScreen extends Screen {
         p.buttons("Snow", () -> run("snow " + touchRadius()), "Thaw", () -> run("thaw " + touchRadius()));
         p.buttons("Green", () -> run("green " + touchRadius()), "Drain", () -> run("drain " + touchRadius()));
         p.note("§8Around the block you aim at. Green turns dirt to grass; Drain removes water and lava.");
+        p.section("Biome");
+        p.chips(BIOMES, null, biomeIndex, 3, v -> biomeIndex = v);
+        p.buttons("Paint around target", () -> run("biome " + BIOMES[biomeIndex] + " " + touchRadius()),
+            "Paint selection", () -> run("biome " + BIOMES[biomeIndex] + " -s"));
+        p.note("§8Uses the Radius above. /sb biome <name> takes any biome.");
     }
 
     private static String touchRadius() {
