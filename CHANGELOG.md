@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.1
 
 - Fixed one damaged undo file (for example after a crash mid-save) wiping the whole history for that world. Now only that entry is skipped, and if it was the one you were on, you stay on the closest one that survived instead of jumping back to the start
 - History files are now written to a temporary file, flushed to disk and swapped in, so a crash can't leave half-written ones
