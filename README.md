@@ -6,6 +6,8 @@ editor, with a live preview and an undo history you never lose.
 
 Works in singleplayer on its own. On a server, install the SyrkBuilder plugin (coming soon) on the server as well.
 
+![SyrkBuilder terrain generation](2026-09-29_12.57.14.png)
+
 ## Versions
 
 | Minecraft | Branch | Java |
