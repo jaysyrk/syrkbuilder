@@ -201,7 +201,7 @@ public final class SyrkBuilderClient implements ClientModInitializer {
     static BlockPos lookedAt(LocalPlayer player) {
         HitResult hit = player.pick(REACH, 1.0f, false);
         if (hit instanceof BlockHitResult blockHit && hit.getType() == HitResult.Type.BLOCK) {
-            return blockHit.getBlockPos();
+            return blockHit.getBlockPos().immutable();
         }
         return null;
     }
