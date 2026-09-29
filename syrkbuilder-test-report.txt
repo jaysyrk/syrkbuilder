@@ -1,0 +1,19 @@
+PASS  /sb sphere places stone at the aimed block
+PASS  sphere is a live preview
+PASS  F7 opens the editor
+PASS  arrow key nudges the preview
+PASS  Esc closes the picker, not the editor
+PASS  Ctrl+Z undoes the sphere
+PASS  F7 closes the editor
+PASS  N turns noclip on
+PASS  noclip sets noPhysics on the client player
+      noclip flight: y -60.15 -> -78.38 (ground top at -60)
+PASS  noclip flies down through the ground
+PASS  N turns noclip off
+      aiming at BlockPos{x=1, y=-61, z=10} before /sb tree
+      aimed at BlockPos{x=1, y=-60, z=10}, target BlockPos{x=1, y=-61, z=11}
+PASS  /sb tree grows a trunk where you aim
+PASS  /sb move moves the selected blocks
+PASS  /sb move takes the selection along
+PASS  /sb script well builds the well
+PASS  /sb biome paints the biome
