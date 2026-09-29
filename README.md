@@ -29,8 +29,9 @@ Downloads are on Modrinth and on the Releases page.
 - **Works with your other tools.** Opens and saves WorldEdit, FAWE and Axiom `.schem` files and Litematica
   `.litematic` files, and picks up your WorldEdit and Litematica schematic folders automatically.
   
-![SyrkBuilder branching history timeline](2026-09-28_23.18.10_edited.png)
-![SyrkBuilder terrain generation](2026-09-29_12.57.14.png)
+| Terrain generation | Branching history |
+| --- | --- |
+| ![Terrain](2026-09-29_12.57.14.png) | ![History timeline](2026-09-28_23.18.10_edited.png) |
 
 ## The editor (F7)
 
