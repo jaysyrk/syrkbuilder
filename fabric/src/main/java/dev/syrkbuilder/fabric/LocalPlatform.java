@@ -90,4 +90,40 @@ final class LocalPlatform implements Platform<ServerLevel, BlockState> {
     public void runOnMainThread(Runnable task) {
         server.execute(task);
     }
+
+    @Override
+    public String fillBiome(ServerLevel level, int[] box, String biome) {
+        java.util.List<String> said = new java.util.ArrayList<>();
+        boolean[] failed = {false};
+        net.minecraft.commands.CommandSource capture = new net.minecraft.commands.CommandSource() {
+            @Override
+            public void sendSystemMessage(net.minecraft.network.chat.Component message) {
+                said.add(message.getString());
+            }
+
+            @Override
+            public boolean acceptsSuccess() {
+                return true;
+            }
+
+            @Override
+            public boolean acceptsFailure() {
+                failed[0] = true;
+                return true;
+            }
+
+            @Override
+            public boolean shouldInformAdmins() {
+                return false;
+            }
+        };
+        net.minecraft.commands.CommandSourceStack source = server.createCommandSourceStack().withSource(capture).withLevel(level);
+        server.getCommands().performPrefixedCommand(source, String.format("fillbiome %d %d %d %d %d %d %s",
+            box[0], box[1], box[2], box[3], box[4], box[5], biome));
+        String last = said.isEmpty() ? "" : said.get(said.size() - 1);
+        if (failed[0] || said.isEmpty()) {
+            return "&cCouldn't set the biome" + (last.isEmpty() ? "." : ": " + last);
+        }
+        return "&aBiome set to &f" + biome.replace("minecraft:", "") + " &7(" + last + "). &8Biomes aren't part of undo.";
+    }
 }

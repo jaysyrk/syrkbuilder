@@ -50,6 +50,7 @@ public final class Commands {
         "&ePreview&7: the last placement stays live - nudge <dx dy dz|up|left|forward..> [n], turn [deg], cancel, confirm; preview on|off",
         "&eSelection edits&7: move [n] [dir], stack [n] [dir], hollow [thickness], overlay <blocks> [depth], naturalize",
         "&eBuild&7: text <blocks> <words...> [size=] [depth=] [-f flat], arch <blocks> <width> <height> [thickness=] [depth=], replacenear <radius> <from> <to>",
+        "&eBiomes&7: biome <biome> [radius] (around where you look) or biome <biome> -s (selection)",
         "&eMore&7: cut, smooth [passes] (selection), drain|snow|thaw|green [radius] (around where you look)",
         "&eSelection tools&7: select [-a] [-d] (magic select what you look at), expand|contract|shift <n> [dir|vert], size, count <blocks>, distr",
         "&eClipboard&7: copy, paste [rotate=90] [flip] [-a] [swap=stone:andesite], rotate <deg>, flip",

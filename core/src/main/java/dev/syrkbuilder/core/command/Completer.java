@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 public final class Completer {
-    private enum Kind { TREE, PATH_SUB, NUDGE, PREVIEW, FORMAT, SYMMETRY, MASK, BRUSH, BLOCKS, NUMBER, TERRAIN, ROTATION, TEMPLATE_SUB, TEMPLATE, MARKER_SUB, HISTORY, NAME, MODEL, SCRIPT, FREE }
+    private enum Kind { TREE, PATH_SUB, NUDGE, PREVIEW, FORMAT, SYMMETRY, MASK, BRUSH, BLOCKS, NUMBER, TERRAIN, ROTATION, TEMPLATE_SUB, TEMPLATE, MARKER_SUB, HISTORY, NAME, MODEL, SCRIPT, FREE, BIOME }
 
     private record Spec(List<Kind> args, List<String> numberHints, List<String> options, List<String> flags) {
     }
@@ -79,6 +79,7 @@ public final class Completer {
         Map.entry("shift", new Spec(List.of(Kind.NUMBER, Kind.NUDGE), List.of("1", "5", "10"), List.of(), List.of())),
         Map.entry("size", spec(List.of())),
         Map.entry("cut", spec(List.of())),
+        Map.entry("biome", new Spec(List.of(Kind.BIOME, Kind.NUMBER), List.of("8", "16", "32"), List.of(), List.of("-s"))),
         Map.entry("text", new Spec(List.of(Kind.BLOCKS, Kind.FREE), List.of(), List.of("size=", "depth="), List.of("-f"))),
         Map.entry("arch", new Spec(List.of(Kind.BLOCKS, Kind.NUMBER, Kind.NUMBER), List.of("12", "20", "8"), List.of("thickness=", "depth="), List.of())),
         Map.entry("replacenear", new Spec(List.of(Kind.NUMBER, Kind.BLOCKS, Kind.BLOCKS), List.of("5", "10", "20"), List.of(), List.of())),
@@ -93,7 +94,17 @@ public final class Completer {
         "dome", "cyl", "circle", "disc", "cone", "pyramid", "torus", "helix", "terrain", "copy", "paste", "rotate", "flip",
         "template", "marker", "undo", "redo", "history", "goto", "checkpoint", "restore", "mask", "symmetry", "gradient",
         "tree", "path", "fill", "nudge", "turn", "cancel", "confirm", "preview", "move", "stack", "hollow", "overlay",
-        "naturalize", "count", "distr", "select", "expand", "contract", "shift", "size", "cut", "smooth", "drain", "snow", "thaw", "green", "text", "arch", "replacenear");
+        "naturalize", "count", "distr", "select", "expand", "contract", "shift", "size", "cut", "smooth", "drain", "snow", "thaw", "green", "text", "arch", "replacenear", "biome");
+
+    public static final List<String> BIOMES = List.of("plains", "sunflower_plains", "snowy_plains", "ice_spikes", "desert", "swamp", "mangrove_swamp",
+        "forest", "flower_forest", "birch_forest", "dark_forest", "pale_garden", "old_growth_birch_forest", "old_growth_pine_taiga",
+        "old_growth_spruce_taiga", "taiga", "snowy_taiga", "savanna", "savanna_plateau", "windswept_hills", "windswept_gravelly_hills",
+        "windswept_forest", "windswept_savanna", "jungle", "sparse_jungle", "bamboo_jungle", "badlands", "eroded_badlands",
+        "wooded_badlands", "meadow", "cherry_grove", "grove", "snowy_slopes", "frozen_peaks", "jagged_peaks", "stony_peaks", "river",
+        "frozen_river", "beach", "snowy_beach", "stony_shore", "warm_ocean", "lukewarm_ocean", "deep_lukewarm_ocean", "ocean", "deep_ocean",
+        "cold_ocean", "deep_cold_ocean", "frozen_ocean", "deep_frozen_ocean", "mushroom_fields", "dripstone_caves", "lush_caves",
+        "deep_dark", "nether_wastes", "warped_forest", "crimson_forest", "soul_sand_valley", "basalt_deltas", "the_end", "end_highlands",
+        "end_midlands", "small_end_islands", "end_barrens", "the_void");
 
     private static Spec spec(List<Kind> args) {
         return new Spec(args, List.of(), List.of(), List.of());
@@ -209,6 +220,7 @@ public final class Completer {
             case PATH_SUB -> filter(List.of("add", "undo", "clear", "road", "wall", "tunnel", "river", "bridge", "line"), word);
             case NUDGE -> filter(List.of("up", "down", "left", "right", "forward", "back", "1", "-1"), word);
             case PREVIEW -> filter(List.of("on", "off"), word);
+            case BIOME -> filter(BIOMES, word);
             case MASK -> {
                 List<String> out = new ArrayList<>(filter(List.of("off"), word));
                 out.addAll(blocks(word));

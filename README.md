@@ -70,6 +70,7 @@ Everything in the editor is also a command. `/sb help` lists them all and every 
 /sb count <blocks>, /sb distr                   /sb cut, /sb smooth [passes]
 /sb drain|snow|thaw|green [radius]              /sb text <blocks> <words> [size=] [-f]
 /sb arch <blocks> <width> <height>              /sb replacenear <radius> <from> <to>
+/sb biome <biome> [radius] [-s]
 /sb settings
 /sb undo, /sb redo, /sb history, /sb goto <#id|name>, /sb checkpoint <name>, /sb restore <#id|name>
 /sb noclip
