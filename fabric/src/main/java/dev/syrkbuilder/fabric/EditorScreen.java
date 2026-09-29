@@ -1159,8 +1159,10 @@ final class EditorScreen extends Screen {
         if (isTyping()) {
             return super.keyPressed(event);
         }
-        boolean ctrl = (event.modifiers() & (GLFW.GLFW_MOD_CONTROL | GLFW.GLFW_MOD_SUPER)) != 0;
-        boolean shift = (event.modifiers() & GLFW.GLFW_MOD_SHIFT) != 0;
+        boolean ctrl = (event.modifiers() & (GLFW.GLFW_MOD_CONTROL | GLFW.GLFW_MOD_SUPER)) != 0
+            || down(GLFW.GLFW_KEY_LEFT_CONTROL) || down(GLFW.GLFW_KEY_RIGHT_CONTROL)
+            || down(GLFW.GLFW_KEY_LEFT_SUPER) || down(GLFW.GLFW_KEY_RIGHT_SUPER);
+        boolean shift = (event.modifiers() & GLFW.GLFW_MOD_SHIFT) != 0 || shiftDown();
         if (!ctrl && isKey(SyrkBuilderClient.editorKey(), key)) {
             onClose();
             return true;
