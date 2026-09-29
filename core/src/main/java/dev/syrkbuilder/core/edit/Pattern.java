@@ -5,22 +5,111 @@ import java.util.List;
 import java.util.Locale;
 
 public final class Pattern {
+    private static final String DIRECTIONS = "up, down, east, west, north, south, out, in, look, or x/y/z like 1/0/1";
+
     private final List<String> blocks = new ArrayList<>();
     private final List<Double> cumulative = new ArrayList<>();
     private double total;
-    private char gradient;
+    private boolean gradient;
+    private double dirX;
+    private double dirY = 1;
+    private double dirZ;
+    private boolean axisAligned = true;
+    private int radial;
+    private boolean ranged;
+    private double rangeFrom;
+    private double rangeTo;
     private Box bounds;
 
     public static Pattern parse(String raw) {
-        String lower = raw.trim().toLowerCase(Locale.ROOT);
+        String trimmed = raw.trim();
+        String lower = trimmed.toLowerCase(Locale.ROOT);
+        if (lower.startsWith("grad(")) {
+            int close = trimmed.indexOf(')');
+            if (close < 0 || close + 1 >= trimmed.length() || trimmed.charAt(close + 1) != ':') {
+                throw new IllegalArgumentException("Gradient options go in brackets before a colon, e.g. grad(down):stone,snow_block");
+            }
+            Pattern g = parsePlain(trimmed.substring(close + 2));
+            g.gradient = true;
+            g.options(lower.substring(5, close));
+            return g;
+        }
         for (String prefix : List.of("grad:", "grady:", "gradx:", "gradz:", "gradr:")) {
             if (lower.startsWith(prefix)) {
-                Pattern g = parsePlain(raw.trim().substring(prefix.length()));
-                g.gradient = prefix.length() == 5 ? 'y' : prefix.charAt(4);
+                Pattern g = parsePlain(trimmed.substring(prefix.length()));
+                g.gradient = true;
+                g.direction(prefix.length() == 5 ? "y" : String.valueOf(prefix.charAt(4)));
                 return g;
             }
         }
         return parsePlain(raw);
+    }
+
+    private void options(String opts) {
+        for (String part : opts.split(",")) {
+            String o = part.trim();
+            if (o.isEmpty()) {
+                continue;
+            }
+            int dots = o.indexOf("..");
+            if (dots > 0) {
+                try {
+                    rangeFrom = Double.parseDouble(o.substring(0, dots));
+                    rangeTo = Double.parseDouble(o.substring(dots + 2));
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("A gradient range looks like 60..90, not '" + o + "'");
+                }
+                ranged = true;
+            } else {
+                direction(o);
+            }
+        }
+    }
+
+    private void direction(String d) {
+        radial = 0;
+        axisAligned = true;
+        switch (d) {
+            case "up", "y" -> aim(0, 1, 0);
+            case "down", "-y" -> aim(0, -1, 0);
+            case "east", "x" -> aim(1, 0, 0);
+            case "west", "-x" -> aim(-1, 0, 0);
+            case "south", "z" -> aim(0, 0, 1);
+            case "north", "-z" -> aim(0, 0, -1);
+            case "out", "r" -> radial = 1;
+            case "in", "-r" -> radial = -1;
+            case "look" -> throw new IllegalArgumentException("grad(look) needs a player - use it in /sb commands");
+            default -> vector(d);
+        }
+    }
+
+    private void vector(String d) {
+        String[] c = d.split("/");
+        if (c.length != 3) {
+            throw new IllegalArgumentException("Unknown gradient direction '" + d + "'. Use " + DIRECTIONS);
+        }
+        double x;
+        double y;
+        double z;
+        try {
+            x = Double.parseDouble(c[0]);
+            y = Double.parseDouble(c[1]);
+            z = Double.parseDouble(c[2]);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Unknown gradient direction '" + d + "'. Use " + DIRECTIONS);
+        }
+        double len = Math.sqrt(x * x + y * y + z * z);
+        if (len == 0) {
+            throw new IllegalArgumentException("A gradient direction can't be 0/0/0");
+        }
+        aim(x / len, y / len, z / len);
+        axisAligned = false;
+    }
+
+    private void aim(double x, double y, double z) {
+        dirX = x;
+        dirY = y;
+        dirZ = z;
     }
 
     private static Pattern parsePlain(String raw) {
@@ -73,30 +162,48 @@ public final class Pattern {
         return bracket < 0 ? block : block.substring(0, bracket);
     }
 
+    // With a range, the first and last block sit at fixed world positions, so a brush stroke blends as one
+    // gradient instead of restarting in every dab. Without one, the gradient stretches over the shape it fills.
     private String pickGradient(int x, int y, int z) {
-        if (bounds == null) {
-            return blocks.get(0);
-        }
-        double t = switch (gradient) {
-            case 'x' -> frac(x, bounds.minX(), bounds.maxX());
-            case 'z' -> frac(z, bounds.minZ(), bounds.maxZ());
-            case 'r' -> {
-                double cx = (bounds.minX() + bounds.maxX()) / 2.0;
-                double cy = (bounds.minY() + bounds.maxY()) / 2.0;
-                double cz = (bounds.minZ() + bounds.maxZ()) / 2.0;
-                double half = Math.max(1, Math.max(bounds.maxX() - cx, Math.max(bounds.maxY() - cy, bounds.maxZ() - cz)));
-                double d = Math.sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy) + (z - cz) * (z - cz));
-                yield Math.min(1, d / half);
+        double at;
+        double lo;
+        double hi;
+        if (radial != 0) {
+            if (bounds == null) {
+                return blocks.get(0);
             }
-            default -> frac(y, bounds.minY(), bounds.maxY());
-        };
+            double cx = (bounds.minX() + bounds.maxX()) / 2.0;
+            double cy = (bounds.minY() + bounds.maxY()) / 2.0;
+            double cz = (bounds.minZ() + bounds.maxZ()) / 2.0;
+            at = Math.sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy) + (z - cz) * (z - cz));
+            double half = Math.max(1, Math.max(bounds.maxX() - cx, Math.max(bounds.maxY() - cy, bounds.maxZ() - cz)));
+            lo = ranged ? rangeFrom : radial > 0 ? 0 : half;
+            hi = ranged ? rangeTo : radial > 0 ? half : 0;
+        } else if (ranged) {
+            // A range names world coordinates, so on a plain axis the range's order sets the direction.
+            at = axisAligned ? x * Math.abs(dirX) + y * Math.abs(dirY) + z * Math.abs(dirZ) : x * dirX + y * dirY + z * dirZ;
+            lo = rangeFrom;
+            hi = rangeTo;
+        } else {
+            if (bounds == null) {
+                return blocks.get(0);
+            }
+            at = x * dirX + y * dirY + z * dirZ;
+            lo = low(dirX, bounds.minX(), bounds.maxX()) + low(dirY, bounds.minY(), bounds.maxY()) + low(dirZ, bounds.minZ(), bounds.maxZ());
+            hi = high(dirX, bounds.minX(), bounds.maxX()) + high(dirY, bounds.minY(), bounds.maxY()) + high(dirZ, bounds.minZ(), bounds.maxZ());
+        }
+        double t = hi == lo ? 0 : Math.max(0, Math.min(1, (at - lo) / (hi - lo)));
         double scaled = t * (blocks.size() - 1) + dither(x, y, z);
         int idx = Math.max(0, Math.min(blocks.size() - 1, (int) Math.floor(scaled)));
         return blocks.get(idx);
     }
 
-    private static double frac(int v, int min, int max) {
-        return max <= min ? 0 : (v - min) / (double) (max - min);
+    private static double low(double d, int min, int max) {
+        return Math.min(d * min, d * max);
+    }
+
+    private static double high(double d, int min, int max) {
+        return Math.max(d * min, d * max);
     }
 
     private static final int[] BAYER = {0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5};
@@ -133,7 +240,7 @@ public final class Pattern {
     }
 
     public boolean isGradient() {
-        return gradient != 0;
+        return gradient;
     }
 
     public Pattern bind(Box box) {
@@ -142,7 +249,7 @@ public final class Pattern {
     }
 
     public String pick(int x, int y, int z) {
-        if (gradient != 0 && blocks.size() > 1) {
+        if (gradient && blocks.size() > 1) {
             return pickGradient(x, y, z);
         }
         if (blocks.size() == 1) {

@@ -49,8 +49,19 @@ current tool. Middle-click copies the block you aim at into the tool's Blocks fi
 | History | the branching timeline; click to jump, shift+click to restore your selection |
 | Settings | rebind keys, noclip toggle or hold, fly speed, look sensitivity, quiet chat, particles |
 
-Every Blocks field has a colour picker: choose a colour to see the closest blocks, or build a gradient between
-two colours. Blocks can be mixes (`60%stone,40%andesite`) or gradients (`grad:`, `gradx:`, `gradz:`, `gradr:`).
+Every Blocks field has a colour picker: choose a colour to see the closest blocks and use one or the whole
+palette, or build a gradient between two colours. Blocks can be mixes (`60%stone,40%andesite`) or gradients:
+
+- `grad:stone,andesite,diorite` runs from bottom to top across whatever you're building
+- `grad(down):`, `grad(east):`, `grad(west):`, `grad(north):`, `grad(south):` pick another direction, `grad(out):`
+  and `grad(in):` run from the centre or towards it, `grad(look):` follows where you're facing, and `grad(1/0/1):`
+  takes any direction
+- add a range to pin the ends to the world, e.g. `grad(up,60..90):stone,andesite,snow_block` puts stone at y 60 and
+  snow at y 90. A brush stroke then blends as one gradient instead of restarting in every dab. In the colour picker,
+  aim and click Start at aim and End at aim
+
+Brushes take `rx=`, `ry=` and `rz=` to give them their own size on each axis, e.g. `/sb brush sphere 8 stone ry=2`
+paints a flat disc. In the editor, turn on Stretch per axis.
 
 ### Keys
 

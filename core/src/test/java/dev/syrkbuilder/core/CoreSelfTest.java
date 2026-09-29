@@ -1144,6 +1144,21 @@ public final class CoreSelfTest {
         Result needsBlocks = brush(r, "brush sphere 3", new int[]{0, 64, 0});
         check("block brushes need blocks", needsBlocks.kind() == Result.Kind.ERROR, needsBlocks);
 
+        FlatWorld pan = new FlatWorld(0);
+        pan.run(brush(pan, "brush sphere 4 stone ry=1", new int[]{0, 100, 0}).stream());
+        check("ry= flattens a sphere brush", pan.blockId(4, 100, 0).equals("minecraft:stone") && pan.blockId(0, 101, 0).equals("minecraft:stone")
+            && pan.blockId(0, 102, 0).endsWith("air"), pan.blockId(0, 102, 0));
+        FlatWorld wide = meadow();
+        wide.run(brush(wide, "brush erase 3 rx=6", new int[]{0, 64, 0}).stream());
+        check("rx= stretches a brush along x only", wide.blockId(6, 64, 0).endsWith("air") && !wide.blockId(0, 64, 5).endsWith("air"), wide.blockId(0, 64, 5));
+        FlatWorld ridge = meadow();
+        ridge.run(brush(ridge, "brush raise 3 rz=8 strength=4", new int[]{0, 64, 0}).stream());
+        check("terrain brushes stretch into a ridge", topAt(ridge, 0, 6) > 64 && topAt(ridge, 6, 0) == 64, topAt(ridge, 0, 6) + " / " + topAt(ridge, 6, 0));
+        FlatWorld slab = new FlatWorld(0);
+        slab.run(brush(slab, "brush blob 3 stone ry=1 strength=0", new int[]{0, 100, 0}).stream());
+        check("voxel brushes stretch too", slab.blockId(3, 100, 0).equals("minecraft:stone") && slab.blockId(0, 101, 0).equals("minecraft:stone")
+            && slab.blockId(0, 102, 0).endsWith("air"), slab.blockId(0, 102, 0));
+
         FlatWorld b = meadow();
         int blob = b.run(brush(b, "brush blob 4 stone", new int[]{0, 80, 0}).stream());
         check("blob makes a lumpy ball", blob > 100 && blob < 900 && b.blockState(0, 80, 0).equals("minecraft:stone"), blob);
@@ -1465,5 +1480,41 @@ public final class CoreSelfTest {
         check("hex colour gradient", hex.kind() == Result.Kind.MESSAGE && hex.lines().get(1).contains("red_wool"), hex.lines());
         Result bad = cmds.run(new Request("gradient mystery_block stone", null, null, null, null, 0, 0), w, session(), services());
         check("unknown colour is an error", bad.kind() == Result.Kind.ERROR, bad);
+
+        FlatWorld down = new FlatWorld(0);
+        down.run(cmds.run(new Request("set grad(down):white_wool,black_wool", null, new int[]{0, 50, 0}, new int[]{0, 60, 0}, null, 0, 0), down, session(), services()).stream());
+        check("grad(down) starts at the top", "minecraft:white_wool".equals(down.blocks.get(FlatWorld.key(0, 60, 0)))
+            && "minecraft:black_wool".equals(down.blocks.get(FlatWorld.key(0, 50, 0))), "");
+        FlatWorld west = new FlatWorld(0);
+        west.run(cmds.run(new Request("set grad(west):red_wool,blue_wool", null, new int[]{0, 50, 0}, new int[]{10, 50, 0}, null, 0, 0), west, session(), services()).stream());
+        check("grad(west) runs from east to west", "minecraft:red_wool".equals(west.blocks.get(FlatWorld.key(10, 50, 0)))
+            && "minecraft:blue_wool".equals(west.blocks.get(FlatWorld.key(0, 50, 0))), "");
+        FlatWorld diag = new FlatWorld(0);
+        diag.run(cmds.run(new Request("set grad(1/0/1):red_wool,blue_wool", null, new int[]{0, 50, 0}, new int[]{10, 50, 10}, null, 0, 0), diag, session(), services()).stream());
+        check("diagonal gradient corner to corner", "minecraft:red_wool".equals(diag.blocks.get(FlatWorld.key(0, 50, 0)))
+            && "minecraft:blue_wool".equals(diag.blocks.get(FlatWorld.key(10, 50, 10))), "");
+        FlatWorld look = new FlatWorld(0);
+        look.run(cmds.run(new Request("set grad(look):red_wool,blue_wool", null, new int[]{0, 50, 0}, new int[]{10, 50, 0}, null, -90f, 0), look, session(), services()).stream());
+        check("grad(look) follows the way you face", "minecraft:red_wool".equals(look.blocks.get(FlatWorld.key(0, 50, 0)))
+            && "minecraft:blue_wool".equals(look.blocks.get(FlatWorld.key(10, 50, 0))), "");
+        FlatWorld in = new FlatWorld(0);
+        in.run(cmds.run(new Request("sphere grad(in):gold_block,stone 6", new int[]{0, 100, 0}, null, null, null, 0, 0), in, session(), services()).stream());
+        check("grad(in): edge first, centre last", "minecraft:stone".equals(in.blocks.get(FlatWorld.key(0, 100, 0)))
+            && "minecraft:gold_block".equals(in.blocks.get(FlatWorld.key(6, 100, 0))), "");
+
+        FlatWorld dabs = new FlatWorld(0);
+        for (int y : new int[]{100, 110}) {
+            dabs.run(cmds.run(new Request("brush sphere 2 grad(up,100..110):white_wool,black_wool", new int[]{0, y, 0}, null, null, null, 0, 0), dabs, session(), services()).stream());
+        }
+        check("a gradient range spans separate brush dabs", "minecraft:white_wool".equals(dabs.blocks.get(FlatWorld.key(0, 100, 0)))
+            && "minecraft:black_wool".equals(dabs.blocks.get(FlatWorld.key(0, 110, 0))), "");
+        FlatWorld flipped = new FlatWorld(0);
+        flipped.run(cmds.run(new Request("set grad(y,60..50):white_wool,black_wool", null, new int[]{0, 50, 0}, new int[]{0, 60, 0}, null, 0, 0), flipped, session(), services()).stream());
+        check("the range's order sets the direction", "minecraft:white_wool".equals(flipped.blocks.get(FlatWorld.key(0, 60, 0)))
+            && "minecraft:black_wool".equals(flipped.blocks.get(FlatWorld.key(0, 50, 0))), "");
+        Result nonsense = cmds.run(new Request("set grad(sideways):stone,dirt", null, new int[]{0, 50, 0}, new int[]{1, 50, 0}, null, 0, 0), w, session(), services());
+        check("unknown gradient direction is an error", nonsense.kind() == Result.Kind.ERROR && nonsense.lines().get(0).contains("up, down"), nonsense);
+        Result noColon = cmds.run(new Request("set grad(down)stone,dirt", null, new int[]{0, 50, 0}, new int[]{1, 50, 0}, null, 0, 0), w, session(), services());
+        check("gradient options need a colon", noColon.kind() == Result.Kind.ERROR, noColon);
     }
 }

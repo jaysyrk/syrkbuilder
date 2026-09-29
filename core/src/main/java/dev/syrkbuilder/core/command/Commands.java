@@ -42,7 +42,7 @@ public final class Commands {
         "&eSelection&7: set, replace <from> <to>, walls, outline, line [radius]",
         "&eShapes&7 (at the block you look at): sphere, ellipsoid, dome, cyl, circle, disc, cone, pyramid, torus, helix",
         "&eTerrain&7: terrain <mountain|hills|mesa|volcano|crater|canyon|dunes|island> [options] &8(/sb terrain list)",
-        "&eBrushes&7: brush <type> [radius] [blocks] - or &f/sb brush bind ...&7 and hold right-click &8(/sb brush list)",
+        "&eBrushes&7: brush <type> [radius] [blocks] [rx= ry= rz=] - or &f/sb brush bind ...&7 and hold right-click &8(/sb brush list)",
         "&eTrees&7: tree <oak|birch|spruce|pine|jungle|dark_oak|acacia|cherry|willow|palm|dead|swamp|mix> [height], brush trees <radius> type=",
         "&eNoclip&7: noclip (or press N) - fly through blocks &8(on servers: spectator mode, needs syrkbuilder.noclip)",
         "&eFill&7: fill <blocks> [radius] [mode=hole|connected|room] &8(bucket fill from the block you aim at)",
@@ -57,13 +57,14 @@ public final class Commands {
         "&eTemplates&7: template save|export|paste|load|list|info|delete <name> (reads .schem/.litematic too), marker <name>|list|remove|clear",
         "&eImport&7: import <file> [size=64] [palette=all] [-s solid] &8(files in .minecraft/syrkbuilder/models)",
         "&eScripts&7: script <file> [args] &8(.minecraft/syrkbuilder/scripts, or the server's scripts folder)",
-        "&eGradients&7: blocks like &fgrad:stone,andesite,diorite&7 (gradx/gradz/gradr); &fgradient <from> <to> [steps]&7 finds in-between blocks",
+        "&eGradients&7: blocks like &fgrad:stone,andesite,diorite&7 run upwards; &fgradient <from> <to> [steps]&7 finds in-between blocks",
+        "&eGradient options&7: &fgrad(down):&7, east/west/north/south, out/in, look or 1/0/1; add a range to pin the ends: &fgrad(up,60..90):",
         "&eMask & mirror&7: mask <blocks|!blocks|off>, symmetry <x|z|xz|off> &8(apply to every edit)",
         "&eHistory&7: undo [n], redo [n], history, goto <#id|checkpoint>, checkpoint <name>, restore <#id|checkpoint>",
         "&7Blocks can be mixes: &f60%stone,40%andesite&7. Flags: &f-h&7 hollow, &f-a&7 skip/only air.");
 
     public Result run(Request req, WorldView world, Session session, Services services) {
-        Args a = Args.parse(req.command());
+        Args a = Args.parse(withLook(req.command(), req.yaw(), req.pitch()));
         String cmd = a.lower(0);
         try {
             Result r = dispatch(cmd, a, req, world, session, services);
@@ -82,6 +83,20 @@ public final class Commands {
         } catch (IllegalArgumentException e) {
             return Result.error(e.getMessage());
         }
+    }
+
+    static String withLook(String command, float yaw, float pitch) {
+        if (!command.toLowerCase(Locale.ROOT).contains("grad(look")) {
+            return command;
+        }
+        double y = Math.toRadians(yaw);
+        double p = Math.toRadians(pitch);
+        String v = round3(-Math.sin(y) * Math.cos(p)) + "/" + round3(-Math.sin(p)) + "/" + round3(Math.cos(y) * Math.cos(p));
+        return command.replaceAll("(?i)grad\\(look", java.util.regex.Matcher.quoteReplacement("grad(" + v));
+    }
+
+    private static String round3(double v) {
+        return java.math.BigDecimal.valueOf(Math.round(v * 1000) / 1000.0).stripTrailingZeros().toPlainString();
     }
 
     private static List<String> buildLimit(Box box, WorldView world) {
@@ -816,7 +831,7 @@ public final class Commands {
         String pattern = "grad:" + String.join(",", shortNames);
         return Result.message(List.of("&6Gradient&7: &f" + String.join(" &8> &f", shortNames),
             "&7Use it as blocks anywhere: &f" + pattern,
-            "&8(gradx:/gradz: run sideways, gradr: from the centre out)"));
+            "&8Change the direction with grad(down):, grad(east):, grad(out):, grad(look):, or pin the ends with grad(up,60..90):"));
     }
 
     private Result fill(Request req, Args a, WorldView world) {
@@ -907,7 +922,7 @@ public final class Commands {
         String typeName = a.lower(1);
         if (typeName.isEmpty() || typeName.equals("list")) {
             List<String> lines = new ArrayList<>();
-            lines.add("&6Brushes &7(&f/sb brush <type> [radius] [blocks]&7, or &f/sb brush bind ...&7 then hold right-click):");
+            lines.add("&6Brushes &7(&f/sb brush <type> [radius] [blocks]&7, or &f/sb brush bind ...&7 then hold right-click; &frx= ry= rz=&7 stretch it):");
             for (dev.syrkbuilder.core.brush.BrushType t : dev.syrkbuilder.core.brush.BrushType.values()) {
                 lines.add("&7- &f" + t.id() + " &8" + t.description);
             }
@@ -918,6 +933,9 @@ public final class Commands {
             return Result.error("Unknown brush '" + typeName + "'. Try /sb brush list");
         }
         int radius = a.intArg(2, "radius", 4, 1, type.maxRadius());
+        int rx = a.intValue("rx", radius, 1, type.maxRadius());
+        int ry = a.intValue("ry", radius, 1, type.maxRadius());
+        int rz = a.intValue("rz", radius, 1, type.maxRadius());
         Pattern pattern = switch (type.blocks) {
             case REQUIRED -> pattern(a, 3);
             case OPTIONAL -> a.word(3) != null ? pattern(a, 3) : null;
@@ -937,7 +955,7 @@ public final class Commands {
                 from.add(Pattern.baseId(b));
             }
         }
-        dev.syrkbuilder.core.brush.Brushes.Settings settings = new dev.syrkbuilder.core.brush.Brushes.Settings(type, radius, pattern, strength,
+        dev.syrkbuilder.core.brush.Brushes.Settings settings = new dev.syrkbuilder.core.brush.Brushes.Settings(type, radius, rx, ry, rz, pattern, strength,
             density, a.intValue("depth", 1, 1, 16), a.intValue("height", 1, 1, 16),
             a.doubleValue("scale", 0, 0, 256), a.flag("r"), from, System.nanoTime(), a.string("type", "oak"));
         if (type == dev.syrkbuilder.core.brush.BrushType.TREES) {
