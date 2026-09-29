@@ -29,7 +29,7 @@ import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 public final class Engine<W, B> {
-    public static final List<String> EXAMPLE_SCRIPTS = List.of("tower", "spiral", "forest", "maze");
+    public static final List<String> EXAMPLE_SCRIPTS = List.of("tower", "spiral", "forest", "maze", "house", "lighthouse", "well");
 
     private final Platform<W, B> platform;
     private final EngineConfig config;

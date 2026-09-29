@@ -83,7 +83,7 @@ In singleplayer, everything lives in `.minecraft/syrkbuilder/`:
 
 - `models/` for models to import
 - `heightmaps/` for greyscale images to import as terrain
-- `scripts/` for build scripts (four examples are added on first run)
+- `scripts/` for build scripts (seven examples are added on first run: tower, spiral, forest, maze, house, lighthouse, well)
 - `templates/` for saved and exported builds; `.minecraft/schematics` and
   `.minecraft/config/worldedit/schematics` are read too
 - `history/` for undo history
