@@ -28,7 +28,11 @@ interface Feedback {
         return new Feedback() {
             @Override
             public void info(String message) {
-                show(message);
+                if (Settings.quietChat) {
+                    StatusLine.set(message);
+                } else {
+                    show(message);
+                }
             }
 
             @Override
@@ -40,7 +44,7 @@ interface Feedback {
                 StatusLine.set(message);
                 Minecraft mc = Minecraft.getInstance();
                 if (mc.player != null) {
-                    mc.player.displayClientMessage(Component.literal(message), false);
+                    Chat.say(Component.literal(message));
                 }
             }
         };

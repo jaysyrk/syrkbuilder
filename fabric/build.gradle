@@ -24,3 +24,12 @@ jar {
     dependsOn ':core:jar'
     from { project(':core').sourceSets.main.output }
 }
+
+fabricApi {
+    configureTests {
+        createSourceSet = true
+        modId = 'syrkbuilder-test'
+        enableGameTests = false
+        eula = true
+    }
+}

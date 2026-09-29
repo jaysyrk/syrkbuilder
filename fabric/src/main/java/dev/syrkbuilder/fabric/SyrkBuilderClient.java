@@ -49,7 +49,6 @@ public final class SyrkBuilderClient implements ClientModInitializer {
     static final String[] MODEL_TYPES = {".obj", ".glb", ".gltf", ".vox"};
     static final String[] SCRIPT_TYPES = {".js"};
 
-    static boolean wandEnabled = true;
 
     private static final KeyMapping.Category KEY_CATEGORY = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("syrkbuilder", "main"));
     private static KeyMapping editorKey;
@@ -58,6 +57,7 @@ public final class SyrkBuilderClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        Settings.load();
         LocalFiles.models();
         LocalFiles.scripts();
         LocalBackend.init();
@@ -85,13 +85,19 @@ public final class SyrkBuilderClient implements ClientModInitializer {
                     Feedback.of(ctx).info("§7Selection cleared.");
                     return 1;
                 }))
+                .then(ClientCommandManager.literal("settings").executes(ctx -> {
+                    Minecraft mc = Minecraft.getInstance();
+                    mc.execute(() -> mc.setScreen(EditorScreen.at(EditorScreen.SETTINGS)));
+                    return 1;
+                }))
                 .then(ClientCommandManager.literal("noclip").executes(ctx -> {
                     toggleNoclip(Feedback.of(ctx));
                     return 1;
                 }))
                 .then(ClientCommandManager.literal("wand").executes(ctx -> {
-                    wandEnabled = !wandEnabled;
-                    Feedback.of(ctx).info(wandEnabled
+                    Settings.wand = !Settings.wand;
+                    Settings.save();
+                    Feedback.of(ctx).info(Settings.wand
                         ? "§aGolden axe wand on §7- left-click = pos1, right-click = pos2."
                         : "§7Golden axe wand off.");
                     return 1;
@@ -136,7 +142,7 @@ public final class SyrkBuilderClient implements ClientModInitializer {
             }
             if (!pos.equals(Selection.pos1())) {
                 Selection.setPos1(pos);
-                player.displayClientMessage(Component.literal("§dpos1 §7set to §f" + Selection.describe(pos) + volumeSuffix()), false);
+                Chat.say(Component.literal("§dpos1 §7set to §f" + Selection.describe(pos) + volumeSuffix()));
             }
             return InteractionResult.FAIL;
         });
@@ -152,7 +158,7 @@ public final class SyrkBuilderClient implements ClientModInitializer {
             BlockPos pos = hit.getBlockPos();
             if (!pos.equals(Selection.pos2())) {
                 Selection.setPos2(pos);
-                player.displayClientMessage(Component.literal("§dpos2 §7set to §f" + Selection.describe(pos) + volumeSuffix()), false);
+                Chat.say(Component.literal("§dpos2 §7set to §f" + Selection.describe(pos) + volumeSuffix()));
             }
             return InteractionResult.FAIL;
         });
@@ -164,11 +170,18 @@ public final class SyrkBuilderClient implements ClientModInitializer {
             particles.tick(client);
             EditorMovement.tick(client);
             BrushBindings.tick(client);
-            while (noclipKey.consumeClick()) {
-                if (client.screen == null) {
-                    toggleNoclip(Feedback.chat());
+            if (Settings.noclipHold) {
+                while (noclipKey.consumeClick()) {
+                }
+                holdNoclip(client);
+            } else {
+                while (noclipKey.consumeClick()) {
+                    if (client.screen == null) {
+                        toggleNoclip(Feedback.chat());
+                    }
                 }
             }
+            applyFlySpeed(client);
             while (editorKey.consumeClick()) {
                 if (client.screen == null && client.player != null) {
                     client.setScreen(new EditorScreen());
@@ -178,7 +191,7 @@ public final class SyrkBuilderClient implements ClientModInitializer {
     }
 
     private static boolean isWand(Player player) {
-        return wandEnabled && player.getMainHandItem().is(Items.GOLDEN_AXE);
+        return Settings.wand && player.getMainHandItem().is(Items.GOLDEN_AXE);
     }
 
     static String volumeSuffix() {
@@ -188,7 +201,7 @@ public final class SyrkBuilderClient implements ClientModInitializer {
     static BlockPos lookedAt(LocalPlayer player) {
         HitResult hit = player.pick(REACH, 1.0f, false);
         if (hit instanceof BlockHitResult blockHit && hit.getType() == HitResult.Type.BLOCK) {
-            return blockHit.getBlockPos();
+            return blockHit.getBlockPos().immutable();
         }
         return null;
     }
@@ -315,15 +328,15 @@ public final class SyrkBuilderClient implements ClientModInitializer {
             }
             if (error != null) {
                 Throwable cause = error.getCause() != null ? error.getCause() : error;
-                player.displayClientMessage(Component.literal("§cCouldn't import " + name + ": " + cause.getMessage()), false);
+                Chat.say(Component.literal("§cCouldn't import " + name + ": " + cause.getMessage()));
                 return;
             }
             for (String warning : warnings) {
-                player.displayClientMessage(Component.literal("§e" + warning), false);
+                Chat.say(Component.literal("§e" + warning));
             }
             String safeName = name.replaceAll("[^A-Za-z0-9_.-]", "_");
             upload(player, bytes, id -> "upload-paste " + id + " name=" + safeName + " " + pasteOptions);
-            player.displayClientMessage(Component.literal(String.format("§7Uploading §f%s §7(%,d KB)...", name, Math.max(1, bytes.length / 1024))), false);
+            Chat.say(Component.literal(String.format("§7Uploading §f%s §7(%,d KB)...", name, Math.max(1, bytes.length / 1024))));
         }));
         return 1;
     }
@@ -387,6 +400,41 @@ public final class SyrkBuilderClient implements ClientModInitializer {
         } else {
             fb.error("This server doesn't have the SyrkBuilder plugin, so noclip isn't available.");
         }
+    }
+
+    private static boolean heldNoclip;
+
+    private static void holdNoclip(Minecraft client) {
+        LocalPlayer player = client.player;
+        if (player == null || !LocalBackend.active()) {
+            return;
+        }
+        boolean held = noclipKey.isDown() && player.getAbilities().mayfly;
+        if (held != heldNoclip) {
+            heldNoclip = held;
+            NoClip.set(player.getUUID(), held);
+            if (held) {
+                player.getAbilities().flying = true;
+            }
+        }
+    }
+
+    private static void applyFlySpeed(Minecraft client) {
+        LocalPlayer player = client.player;
+        if (player == null || !player.getAbilities().mayfly) {
+            return;
+        }
+        if (LocalBackend.active() || Settings.flySpeed != 1.0) {
+            player.getAbilities().setFlyingSpeed((float) (0.05 * Settings.flySpeed));
+        }
+    }
+
+    static KeyMapping editorKey() {
+        return editorKey;
+    }
+
+    static KeyMapping noclipKey() {
+        return noclipKey;
     }
 
     static boolean noclipOn() {

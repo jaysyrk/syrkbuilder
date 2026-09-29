@@ -42,6 +42,7 @@ public final class Engine<W, B> {
     private final Map<UUID, Session> sessions = new HashMap<>();
     private final Map<String, HistoryTree<B>> histories = new HashMap<>();
     private final Set<String> loading = new HashSet<>();
+    private final Map<String, List<Runnable>> waitingForHistory = new HashMap<>();
     private final Map<UUID, Deque<EditJob>> queues = new HashMap<>();
     private final Map<String, Integer> strokes = new HashMap<>();
     private final Map<UUID, Pending> pending = new HashMap<>();
@@ -133,10 +134,22 @@ public final class Engine<W, B> {
         return sessions.computeIfAbsent(player, k -> new Session(config.maxUploadBytes()));
     }
 
-    private void handle(UUID player, W world, Request request, Consumer<String> reply) {
+    private void handle(UUID player, W world, Request incoming, Consumer<String> loud) {
+        String command = incoming.command().stripTrailing();
+        boolean quiet = command.endsWith(" -q");
+        Request request = quiet
+            ? new Request(command.substring(0, command.length() - 3), incoming.target(), incoming.pos1(), incoming.pos2(),
+                incoming.feet(), incoming.yaw(), incoming.pitch())
+            : incoming;
+        Consumer<String> reply = !quiet ? loud : line -> {
+            if (line.startsWith("&c") || Protocol.dataLine(line) != null) {
+                loud.accept(line);
+            }
+        };
         HistoryTree<B> tree = history(player, world);
         if (tree == null) {
-            reply.accept("&7Your SyrkBuilder history is still loading - try again in a moment.");
+            waitingForHistory.computeIfAbsent(key(player, world), k -> new java.util.ArrayList<>())
+                .add(() -> handle(player, world, incoming, loud));
             return;
         }
         String key = key(player, world);
@@ -276,6 +289,10 @@ public final class Engine<W, B> {
             store.load(key, loaded -> platform.runOnMainThread(() -> {
                 loading.remove(key);
                 histories.put(key, rebuild(key, loaded));
+                List<Runnable> waiting = waitingForHistory.remove(key);
+                if (waiting != null) {
+                    waiting.forEach(Runnable::run);
+                }
             }));
         }
         return null;
