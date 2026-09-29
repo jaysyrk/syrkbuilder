@@ -37,7 +37,8 @@ final class ColorPicker {
     private static final int LOOK = 6;
 
     static final int W = 240;
-    static final int H = 258;
+    // The tallest the picker gets (the Gradient tab), for placing it on screen.
+    static final int H = 236;
     private static final int GRADIENT_ROWS = 36;
 
     private static float hue = 25;
@@ -80,8 +81,13 @@ final class ColorPicker {
         return mx >= x && mx < x + W && my >= y && my < y + height();
     }
 
-    private static int height() {
-        return gradient ? H : H - GRADIENT_ROWS;
+    private int height() {
+        return useY(blocksTop(), gradient ? gradientBlocks().size() : nearest().size()) - y + 30;
+    }
+
+    // Gradient steps sit in one row so the tab stays short enough for small screens.
+    private static int perRow(int count) {
+        return gradient ? Math.max(6, count) : 6;
     }
 
     private int rowsTop() {
@@ -348,10 +354,11 @@ final class ColorPicker {
 
         int by = blocksTop();
         List<String> blocks = gradient ? gradientBlocks() : nearest();
-        int cw = (W - 16) / 6;
+        int per = perRow(blocks.size());
+        int cw = (W - 16) / per;
         for (int i = 0; i < blocks.size(); i++) {
-            int cx = x + 8 + (i % 6) * cw;
-            int cy = by + (i / 6) * 22;
+            int cx = x + 8 + (i % per) * cw;
+            int cy = by + (i / per) * 22;
             String b = blocks.get(i);
             boolean over = mx >= cx && mx < cx + cw - 2 && my >= cy && my < cy + 20;
             g.fill(cx, cy, cx + cw - 2, cy + 20, over ? ITEM_HOVER : ITEM);
@@ -488,10 +495,11 @@ final class ColorPicker {
             return true;
         }
         int by = blocksTop();
-        int cw = (W - 16) / 6;
+        int per = perRow(blocks.size());
+        int cw = (W - 16) / per;
         for (int i = 0; i < blocks.size(); i++) {
-            int cx = x + 8 + (i % 6) * cw;
-            int cy = by + (i / 6) * 22;
+            int cx = x + 8 + (i % per) * cw;
+            int cy = by + (i / per) * 22;
             if (mx >= cx && mx < cx + cw - 2 && my >= cy && my < cy + 20) {
                 if (!gradient) {
                     target.accept(shortId(blocks.get(i)));
@@ -510,7 +518,8 @@ final class ColorPicker {
     }
 
     private static int useY(int blocksTop, int count) {
-        int rows = Math.max(1, (count + 5) / 6);
+        int per = perRow(count);
+        int rows = Math.max(1, (count + per - 1) / per);
         return blocksTop + rows * 22 + 2;
     }
 
