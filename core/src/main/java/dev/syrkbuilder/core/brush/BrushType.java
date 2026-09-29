@@ -28,7 +28,8 @@ public enum BrushType {
     NOISE(Blocks.NONE, 3, 64, List.of("scale"), "roughen terrain (strength= blocks, scale=)"),
     CRATER(Blocks.NONE, 4, 64, List.of(), "dig a bowl with a raised rim (strength= depth)"),
     TERRACE(Blocks.NONE, 4, 32, List.of(), "cut terrain into steps (strength= step height)"),
-    MELT(Blocks.NONE, -1, 0, List.of(), "erode sharp edges into slopes");
+    MELT(Blocks.NONE, -1, 0, List.of(), "erode sharp edges into slopes"),
+    STAMP(Blocks.NONE, -1, 0, List.of(), "paint your clipboard where you aim, randomly turned (-r keeps it straight)");
 
     public enum Blocks { REQUIRED, OPTIONAL, NONE }
 

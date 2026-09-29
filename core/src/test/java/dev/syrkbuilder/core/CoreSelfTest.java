@@ -833,6 +833,10 @@ public final class CoreSelfTest {
         send.accept("replacenear 2 stone andesite", look.apply(new int[]{740, 64, 740}));
         check("replacenear swaps blocks in range", world.blockId(740, 64, 740).equals("minecraft:andesite") && world.blockId(742, 64, 740).equals("minecraft:andesite")
             && world.blockId(743, 64, 740).equals("minecraft:stone"), world.blockId(740, 64, 740));
+        world.blocks.put(FlatWorld.key(760, 70, 760), "minecraft:emerald_block");
+        send.accept("copy", sel.apply(new int[]{760, 70, 760}, new int[]{760, 70, 760}));
+        send.accept("brush stamp -r", look.apply(new int[]{770, 64, 770}));
+        check("stamp brush paints the clipboard", world.blockState(770, 65, 770).equals("minecraft:emerald_block"), world.blockId(770, 65, 770));
         send.accept("script maze", sel.apply(new int[]{20, 64, 20}, new int[]{34, 64, 34}));
         check("engine runs bundled script", world.blocks.containsValue("minecraft:oak_leaves[persistent=true]"), msgs.subList(Math.max(0, msgs.size() - 3), msgs.size()));
         msgs.clear();
