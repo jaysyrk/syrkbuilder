@@ -263,6 +263,29 @@ public final class CoreSelfTest {
         Map<Long, String> mid = r.regionAt(r.node(1), Box.of(-5, -5, -5, 5, 5, 5));
         check("region restore to middle", "stone".equals(mid.get(ChangeSet.pack(0, 0, 0))), mid);
 
+        HistoryTree<String> q = new HistoryTree<>(1000);
+        ChangeSet<String> qb = change("qb", 2, "air", "B");
+        ChangeSet<String> qc = change("qc", 3, "air", "C");
+        q.push(change("qa", 1, "air", "A"));
+        q.push(qb);
+        q.undo();
+        q.push(qc);
+        q.undo();
+        q.regionAt(q.node(2), Box.of(-5, -5, -5, 5, 5, 5));
+        check("region restore keeps the redo branch", q.redo() == qc, q.current().id());
+
+        HistoryTree<String> lin = new HistoryTree<>(1000);
+        ChangeSet<String> l1 = change("l1", 1, "air", "A");
+        lin.push(l1);
+        lin.push(change("l2", 2, "air", "B"));
+        lin.push(change("l3", 3, "air", "C"));
+        Map<Integer, ChangeSet<String>> partial = new HashMap<>();
+        partial.put(1, l1);
+        partial.put(3, lin.current().change());
+        HistoryTree<String> survived = HistoryTree.rebuild(1000, lin.structure(), partial, lin.current().id());
+        check("rebuild with a lost entry stays on its nearest ancestor", survived.current().id() == 1 && survived.undo() == l1,
+            survived.current().id());
+
         HistoryTree<String> p = new HistoryTree<>(3);
         p.push(change("1", 1, "a", "b"));
         p.push(change("2", 2, "a", "b"));
@@ -323,6 +346,15 @@ public final class CoreSelfTest {
             rejected = true;
         }
         check("upload size limit", rejected, "");
+        Session flood = new Session(1 << 20);
+        flood.uploads().accept(new UploadChunk(1, 0, 2, new byte[]{1}));
+        for (int id = 100; id < 110; id++) {
+            flood.uploads().accept(new UploadChunk(id, 0, 2, new byte[]{2}));
+        }
+        flood.uploads().accept(new UploadChunk(1, 1, 2, new byte[]{3}));
+        flood.uploads().accept(new UploadChunk(109, 1, 2, new byte[]{4}));
+        check("unfinished uploads are capped, oldest dropped first", flood.uploads().take(1) == null
+            && Arrays.equals(flood.uploads().take(109), new byte[]{2, 4}), "");
     }
 
     private static void terrain() {
@@ -545,6 +577,7 @@ public final class CoreSelfTest {
         sc.put("packages", "Packages.java.io.File");
         sc.put("big", "fill(0,0,0, 100,100,100, 'stone')");
         sc.put("syntax", "set(1,2,");
+        sc.put("recurse", "function f(n) { return f(n + 1); } f(0);");
         sc.put("shapes", "sphere(0,80,0,4,'glass',true); cylinder(0,64,20,3,5,'stone'); line(0,70,0,10,70,0,'gold_block'); print(get(0,64,0), ground(3,3), noise(1,2) <= 1)");
         Services sv = services(new MemoryTemplates(), sc);
         long start = System.currentTimeMillis();
@@ -558,6 +591,10 @@ public final class CoreSelfTest {
         check("script block limit", big.kind() == Result.Kind.ERROR && big.lines().get(0).contains("limit"), big);
         Result syntax = cmds.run(new Request("script syntax", new int[]{0, 64, 0}, null, null, null, 0, 0), w, session(), sv);
         check("syntax error reported with line", syntax.kind() == Result.Kind.ERROR && syntax.lines().get(0).contains("line"), syntax);
+        long deepStart = System.currentTimeMillis();
+        Result deep = cmds.run(new Request("script recurse", new int[]{0, 64, 0}, null, null, null, 0, 0), w, session(), sv);
+        check("runaway recursion is stopped quickly", deep.kind() == Result.Kind.ERROR && deep.lines().get(0).contains("stack")
+            && System.currentTimeMillis() - deepStart < 1000, deep);
         Result shapes = cmds.run(new Request("script shapes", new int[]{0, 64, 0}, null, null, null, 0, 0), w, session(), sv);
         check("script shape helpers", shapes.kind() == Result.Kind.EDIT && shapes.lines().get(0).contains("minecraft:stone 64 true"), shapes.lines());
         Result missing = cmds.run(new Request("script nope", new int[]{0, 64, 0}, null, null, null, 0, 0), w, session(), sv);
@@ -659,6 +696,12 @@ public final class CoreSelfTest {
 
     static final class MemoryPlatform implements dev.syrkbuilder.core.engine.Platform<FlatWorld, String> {
         final java.util.ArrayDeque<Runnable> mainThread = new java.util.ArrayDeque<>();
+        String denyScripts;
+
+        @Override
+        public String scriptDenied(java.util.UUID player) {
+            return denyScripts;
+        }
 
         public WorldView view(FlatWorld w) {
             return w;
@@ -942,6 +985,41 @@ public final class CoreSelfTest {
         check("one undo removes the whole stroke", world.blockState(40, 80, 40).equals("minecraft:air") && world.blockState(48, 80, 40).equals("minecraft:air"),
             world.blockState(40, 80, 40) + " " + world.blockState(48, 80, 40));
         engine[0].shutdown();
+
+        Path newest;
+        try (var files = Files.walk(data.toPath().resolve("history"))) {
+            newest = files.filter(f -> f.getFileName().toString().matches("\\d+\\.sbc"))
+                .max(java.util.Comparator.comparingInt(f -> Integer.parseInt(f.getFileName().toString().replace(".sbc", ""))))
+                .orElseThrow();
+        }
+        byte[] whole = Files.readAllBytes(newest);
+        Files.write(newest, Arrays.copyOf(whole, whole.length / 2));
+        engine[0] = new dev.syrkbuilder.core.engine.Engine<>(platform, cfg, data, java.util.logging.Logger.getLogger("test"));
+        send.accept("goto 2", none);
+        check("one damaged history file doesn't lose the rest", at.get().equals("minecraft:diamond_block"),
+            at.get() + " " + msgs.subList(Math.max(0, msgs.size() - 3), msgs.size()));
+        int gotoFrom = msgs.size();
+        send.accept("goto sphere", none);
+        check("checkpoints survive a damaged history file", at.get().equals("minecraft:gold_block")
+            && msgs.subList(gotoFrom, msgs.size()).stream().noneMatch(m -> m.contains("No history entry")), at.get());
+        engine[0].shutdown();
+
+        MemoryPlatform lockedPlatform = new MemoryPlatform();
+        lockedPlatform.denyScripts = "&cno scripts";
+        dev.syrkbuilder.core.engine.Engine<FlatWorld, String> locked = new dev.syrkbuilder.core.engine.Engine<>(lockedPlatform, cfg,
+            Files.createTempDirectory("sblocked").toFile(), java.util.logging.Logger.getLogger("test"));
+        List<String> lockedMsgs = new ArrayList<>();
+        locked.receive(player, world, Protocol.encode(new Request("script maze", null, new int[]{20, 64, 20}, new int[]{34, 64, 34}, null, 0, 0)), lockedMsgs::add);
+        for (int i = 0; i < 50 && lockedMsgs.isEmpty(); i++) {
+            Runnable r;
+            while ((r = lockedPlatform.poll()) != null) {
+                r.run();
+            }
+            locked.tick();
+            Thread.sleep(2);
+        }
+        check("platform can refuse scripts", lockedMsgs.contains("&cno scripts"), lockedMsgs);
+        locked.shutdown();
     }
 
     private static void completion() {

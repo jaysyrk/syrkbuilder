@@ -25,6 +25,10 @@ public interface Platform<W, B> {
         return null;
     }
 
+    default String scriptDenied(java.util.UUID player) {
+        return null;
+    }
+
     default String fillBiome(W world, int[] box, String biome) {
         return null;
     }

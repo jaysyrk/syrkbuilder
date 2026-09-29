@@ -74,6 +74,15 @@ final class PaperPlatform implements Platform<World, BlockData> {
     }
 
     @Override
+    public String scriptDenied(java.util.UUID id) {
+        org.bukkit.entity.Player player = Bukkit.getPlayer(id);
+        if (player == null || !player.hasPermission("syrkbuilder.script")) {
+            return "&cYou don't have permission to run scripts on this server (syrkbuilder.script).";
+        }
+        return null;
+    }
+
+    @Override
     @SuppressWarnings("deprecation")
     public int dataVersion() {
         return Bukkit.getUnsafe().getDataVersion();
