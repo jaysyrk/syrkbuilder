@@ -32,7 +32,6 @@ jobs:
 
   client-test:
     runs-on: ubuntu-latest
-    continue-on-error: true
     permissions:
       contents: write
     steps:
@@ -51,18 +50,7 @@ jobs:
       - name: Run the game with the mod
         run: |
           chmod +x gradlew
-          for attempt in 1 2 3; do
-            if xvfb-run -a -s "-screen 0 1920x1080x24" ./gradlew :fabric:runClientGameTest; then
-              exit 0
-            fi
-            report=$(find fabric -name 'syrkbuilder-test-report.txt' | head -1)
-            if [ -z "$report" ] || ! grep -q "Timeout loading world" "$report"; then
-              exit 1
-            fi
-            echo "World didn't finish loading in time (attempt $attempt), starting the game again"
-            find fabric -name 'syrkbuilder-test-report.txt' -delete
-          done
-          exit 1
+          xvfb-run -a -s "-screen 0 1920x1080x24" ./gradlew :fabric:runClientGameTest
 
       - name: Publish screenshots and report
         if: always()
