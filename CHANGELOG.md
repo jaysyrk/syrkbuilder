@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.0
+
+- New Settings tab in the F7 editor (also `/sb settings`): rebind the editor and noclip keys, noclip toggle or hold mode, fly speed, look sensitivity, preview on by default, golden axe wand, quiet chat and particle toggles. Saved in `config/syrkbuilder.properties`
+- Dragging to place no longer fills chat: the first click reports, the rest show in the status bar. Errors still go to chat
+- Fixed editor shortcuts (undo/redo, tool numbers, preview keys) not working after opening the editor, because a text box grabbed focus
+- Fixed Ctrl+Z / Ctrl+Y sometimes not registering Ctrl
+- Fixed the first command after joining a world being rejected with "history is still loading"
+- Fixed the Scripts tab icon being invisible and status bar text overlapping
+- Fixed the aimed position occasionally shifting after a command read it
+
 ## 1.0.0
 
 First public release.
