@@ -23,6 +23,14 @@ public final class NoClip {
         return false;
     }
 
+    static void set(UUID player, boolean on) {
+        if (on) {
+            ON.add(player);
+        } else {
+            ON.remove(player);
+        }
+    }
+
     static void clear() {
         ON.clear();
     }

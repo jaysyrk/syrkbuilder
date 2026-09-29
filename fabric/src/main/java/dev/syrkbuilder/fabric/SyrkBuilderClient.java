@@ -49,7 +49,6 @@ public final class SyrkBuilderClient implements ClientModInitializer {
     static final String[] MODEL_TYPES = {".obj", ".glb", ".gltf", ".vox"};
     static final String[] SCRIPT_TYPES = {".js"};
 
-    static boolean wandEnabled = true;
 
     private static final KeyMapping.Category KEY_CATEGORY = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("syrkbuilder", "main"));
     private static KeyMapping editorKey;
@@ -58,6 +57,7 @@ public final class SyrkBuilderClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        Settings.load();
         LocalFiles.models();
         LocalFiles.scripts();
         LocalBackend.init();
@@ -85,13 +85,19 @@ public final class SyrkBuilderClient implements ClientModInitializer {
                     Feedback.of(ctx).info("§7Selection cleared.");
                     return 1;
                 }))
+                .then(ClientCommands.literal("settings").executes(ctx -> {
+                    Minecraft mc = Minecraft.getInstance();
+                    mc.execute(() -> mc.gui.setScreen(EditorScreen.at(EditorScreen.SETTINGS)));
+                    return 1;
+                }))
                 .then(ClientCommands.literal("noclip").executes(ctx -> {
                     toggleNoclip(Feedback.of(ctx));
                     return 1;
                 }))
                 .then(ClientCommands.literal("wand").executes(ctx -> {
-                    wandEnabled = !wandEnabled;
-                    Feedback.of(ctx).info(wandEnabled
+                    Settings.wand = !Settings.wand;
+                    Settings.save();
+                    Feedback.of(ctx).info(Settings.wand
                         ? "§aGolden axe wand on §7- left-click = pos1, right-click = pos2."
                         : "§7Golden axe wand off.");
                     return 1;
@@ -164,11 +170,18 @@ public final class SyrkBuilderClient implements ClientModInitializer {
             particles.tick(client);
             EditorMovement.tick(client);
             BrushBindings.tick(client);
-            while (noclipKey.consumeClick()) {
-                if (client.gui.screen() == null) {
-                    toggleNoclip(Feedback.chat());
+            if (Settings.noclipHold) {
+                while (noclipKey.consumeClick()) {
+                }
+                holdNoclip(client);
+            } else {
+                while (noclipKey.consumeClick()) {
+                    if (client.gui.screen() == null) {
+                        toggleNoclip(Feedback.chat());
+                    }
                 }
             }
+            applyFlySpeed(client);
             while (editorKey.consumeClick()) {
                 if (client.gui.screen() == null && client.player != null) {
                     client.gui.setScreen(new EditorScreen());
@@ -178,7 +191,7 @@ public final class SyrkBuilderClient implements ClientModInitializer {
     }
 
     private static boolean isWand(Player player) {
-        return wandEnabled && player.getMainHandItem().is(Items.GOLDEN_AXE);
+        return Settings.wand && player.getMainHandItem().is(Items.GOLDEN_AXE);
     }
 
     static String volumeSuffix() {
@@ -387,6 +400,41 @@ public final class SyrkBuilderClient implements ClientModInitializer {
         } else {
             fb.error("This server doesn't have the SyrkBuilder plugin, so noclip isn't available.");
         }
+    }
+
+    private static boolean heldNoclip;
+
+    private static void holdNoclip(Minecraft client) {
+        LocalPlayer player = client.player;
+        if (player == null || !LocalBackend.active()) {
+            return;
+        }
+        boolean held = noclipKey.isDown() && player.getAbilities().mayfly;
+        if (held != heldNoclip) {
+            heldNoclip = held;
+            NoClip.set(player.getUUID(), held);
+            if (held) {
+                player.getAbilities().flying = true;
+            }
+        }
+    }
+
+    private static void applyFlySpeed(Minecraft client) {
+        LocalPlayer player = client.player;
+        if (player == null || !player.getAbilities().mayfly) {
+            return;
+        }
+        if (LocalBackend.active() || Settings.flySpeed != 1.0) {
+            player.getAbilities().setFlyingSpeed((float) (0.05 * Settings.flySpeed));
+        }
+    }
+
+    static KeyMapping editorKey() {
+        return editorKey;
+    }
+
+    static KeyMapping noclipKey() {
+        return noclipKey;
     }
 
     static boolean noclipOn() {

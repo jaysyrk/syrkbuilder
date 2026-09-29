@@ -28,7 +28,11 @@ interface Feedback {
         return new Feedback() {
             @Override
             public void info(String message) {
-                show(message);
+                if (Settings.quietChat) {
+                    StatusLine.set(message);
+                } else {
+                    show(message);
+                }
             }
 
             @Override

@@ -29,3 +29,39 @@ jobs:
             fabric/build/libs/*.jar
             paper/build/libs/*.jar
           if-no-files-found: error
+
+  client-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Install virtual display
+        run: sudo apt-get update -q && sudo apt-get install -y -q xvfb mesa-utils
+
+      - name: Run the game with the mod
+        run: |
+          chmod +x gradlew
+          xvfb-run -a -s "-screen 0 1920x1080x24" ./gradlew :fabric:runClientGameTest
+
+      - name: Publish screenshots and report
+        if: always()
+        run: |
+          mkdir -p /tmp/shots
+          find fabric -path '*screenshots*' -name '*.png' -exec cp {} /tmp/shots/ \; || true
+          find fabric -name 'syrkbuilder-test-report.txt' -exec cp {} /tmp/shots/ \; || true
+          find fabric -path '*logs*' -name 'latest.log' -exec cp {} /tmp/shots/ \; || true
+          cd /tmp/shots
+          ls -la
+          git init -q -b test-screenshots
+          git add -A
+          git -c user.name=ci -c user.email=ci@localhost commit -qm "Test run for ${GITHUB_SHA}" --allow-empty
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" test-screenshots

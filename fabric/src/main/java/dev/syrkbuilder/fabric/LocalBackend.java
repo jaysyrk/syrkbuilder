@@ -75,6 +75,9 @@ final class LocalBackend {
         }
         String text = line.replace('&', '§');
         StatusLine.set(text);
+        if (Settings.quietChat && !line.startsWith("&c")) {
+            return;
+        }
         mc.execute(() -> {
             if (mc.player != null) {
                 Chat.say(Component.literal(text));

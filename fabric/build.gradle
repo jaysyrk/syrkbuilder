@@ -18,6 +18,15 @@ tasks.withType(JavaCompile).configureEach {
     options.release = 25
 }
 
+fabricApi {
+    configureTests {
+        createSourceSet = true
+        modId = 'syrkbuilder-test'
+        enableGameTests = false
+        eula = true
+    }
+}
+
 processResources {
     inputs.property 'version', project.version
     filesMatching('fabric.mod.json') { expand version: project.version }

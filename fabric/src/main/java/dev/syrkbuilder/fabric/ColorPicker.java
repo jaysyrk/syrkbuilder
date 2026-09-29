@@ -65,6 +65,10 @@ final class ColorPicker {
         }
     }
 
+    static void gradientMode(boolean on) {
+        gradient = on;
+    }
+
     boolean contains(double mx, double my) {
         return mx >= x && mx < x + W && my >= y && my < y + H;
     }

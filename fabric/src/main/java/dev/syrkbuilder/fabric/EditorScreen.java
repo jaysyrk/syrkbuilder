@@ -14,6 +14,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.BlockPos;
@@ -38,8 +40,10 @@ final class EditorScreen extends Screen {
     private static final int RIGHT_W = 204;
     private static final int ROW = 16;
 
-    private static final String[] TOOLS = {"Shapes", "Terrain", "Brushes", "Fill", "Trees", "Paths", "Selection", "Clipboard", "Import", "Scripts", "History"};
-    private static final String[] ICONS = {"◆", "▲", "✎", "▼", "♣", "∿", "▣", "❐", "↓", "§", "⟲"};
+    private static final String[] TOOLS = {"Shapes", "Terrain", "Brushes", "Fill", "Trees", "Paths", "Selection", "Clipboard", "Import", "Scripts", "History", "Settings"};
+    private static final String[] ICONS = {"◆", "▲", "✎", "▼", "♣", "∿", "▣", "❐", "↓", "§", "⟲", "⚙"};
+    private static final int HISTORY = 10;
+    static final int SETTINGS = 11;
     private static final int BRUSHES = 2;
     private static final String[] SHAPES = {"sphere", "ellipsoid", "dome", "cyl", "cone", "pyramid", "circle", "disc", "torus", "helix"};
     private static final String[] SEL_ACTIONS = {"set", "walls", "outline", "replace", "line"};
@@ -98,7 +102,7 @@ final class EditorScreen extends Screen {
     private static String pathWidth = "";
     private static String pathBlocks = "";
     private static String pathHeight = "5";
-    private static boolean previewOn = true;
+    private static boolean previewOn = Settings.previewByDefault;
 
     private interface Painter {
         void paint(GuiGraphicsExtractor g, int x, int y, int w, int h, boolean hover);
@@ -120,11 +124,7 @@ final class EditorScreen extends Screen {
     private double lookY;
     private double savedX;
     private double savedY;
-    private boolean undoHeld;
-    private boolean redoHeld;
-    private int digitHeld = -1;
-    private boolean closeHeld = true;
-    private final java.util.Set<Integer> keysHeld = new java.util.HashSet<>();
+    private net.minecraft.client.KeyMapping rebinding;
     private ColorPicker picker;
     private Consumer<String> mainBlocks;
     private int seenData = -1;
@@ -138,6 +138,11 @@ final class EditorScreen extends Screen {
     private BlockPos lastDrag;
     private int stroke;
     private long nextDab;
+
+    static EditorScreen at(int startTool) {
+        tool = startTool;
+        return new EditorScreen();
+    }
 
     EditorScreen() {
         super(Component.literal("SyrkBuilder"));
@@ -156,6 +161,7 @@ final class EditorScreen extends Screen {
 
         int x = width - 6;
         x = topButton(x, "✕", "Close (Esc)", this::onClose);
+        x = topButton(x, "⚙", "Settings", () -> selectTool(SETTINGS));
         x = topButton(x, "History", "Show the timeline in chat", () -> run("history 20"));
         x = topButton(x, "↷ Redo", "Redo (Ctrl+Y)", () -> run("redo"));
         x = topButton(x, "↶ Undo", "Undo (Ctrl+Z)", () -> run("undo"));
@@ -171,14 +177,17 @@ final class EditorScreen extends Screen {
         if (!synced) {
             synced = true;
             SyrkBuilderClient.sync();
+            if (!Settings.previewByDefault) {
+                run("preview off -q");
+            }
         }
         seenData = ClientData.version();
         pendingBar();
 
         for (int i = 0; i < TOOLS.length; i++) {
             int index = i;
-            int ty = TOP + 6 + i * 19;
-            elements.add(new Element(4, ty, LEFT_W - 8, 18, false, (g, ex, ey, w, h, hover) -> {
+            int ty = TOP + 5 + i * 17;
+            elements.add(new Element(4, ty, LEFT_W - 8, 16, false, (g, ex, ey, w, h, hover) -> {
                 boolean active = tool == index;
                 if (active || hover) {
                     box(g, ex, ey, w, h, active ? ITEM_HOVER : ITEM);
@@ -188,7 +197,7 @@ final class EditorScreen extends Screen {
                 }
                 text(g, ICONS[index], ex + 8, ey + 5, active ? ACCENT : DIM);
                 text(g, TOOLS[index], ex + 20, ey + 5, active ? TEXT : DIM);
-            }, () -> selectTool(index), TOOLS[i] + (i < 9 ? "  (" + (i + 1) + ")" : index == TOOLS.length - 1 ? "  (0)" : "")));
+            }, () -> selectTool(index), TOOLS[i] + (i < 9 ? "  (" + (i + 1) + ")" : index == HISTORY ? "  (0)" : "")));
         }
 
         panelBottom = height - BOTTOM;
@@ -211,6 +220,7 @@ final class EditorScreen extends Screen {
             case 7 -> clipboard(p);
             case 8 -> importPanel(p);
             case 9 -> scripts(p);
+            case SETTINGS -> settings(p);
             default -> history(p);
         }
         contentHeight = p.y + scroll[tool] - TOP;
@@ -756,6 +766,85 @@ final class EditorScreen extends Screen {
         return n >= 1000 ? String.format("%.1fk", n / 1000.0) : String.valueOf(n);
     }
 
+    private void settings(Panel p) {
+        p.section("Keys");
+        keyRow(p, "Open editor", SyrkBuilderClient.editorKey());
+        keyRow(p, "Noclip", SyrkBuilderClient.noclipKey());
+        p.segments("Noclip", new String[]{"toggle", "hold"}, Settings.noclipHold ? 1 : 0, v -> {
+            Settings.noclipHold = v == 1;
+            Settings.save();
+        });
+        p.note("§8Click a key, then press the new one (Esc cancels). Also in Controls → SyrkBuilder.");
+        p.section("Movement");
+        double[] speeds = {0.5, 1, 1.5, 2, 3, 4};
+        p.segments("Fly speed", new String[]{"½", "1x", "1.5", "2x", "3x", "4x"}, nearest(speeds, Settings.flySpeed), v -> {
+            Settings.flySpeed = speeds[v];
+            Settings.save();
+        });
+        double[] looks = {0.5, 0.75, 1, 1.5, 2};
+        p.segments("Look", new String[]{"½", "¾", "1x", "1.5", "2x"}, nearest(looks, Settings.lookSensitivity), v -> {
+            Settings.lookSensitivity = looks[v];
+            Settings.save();
+        });
+        p.note("§8Look = how fast the camera turns while holding right-click in the editor.");
+        p.section("Editing");
+        p.toggle("Preview new placements", () -> Settings.previewByDefault, v -> {
+            Settings.previewByDefault = v;
+            previewOn = v;
+            run("preview " + (v ? "on" : "off") + " -q");
+            Settings.save();
+        }, "Keep the last placement adjustable (arrows, R, Delete)");
+        p.toggle("Golden axe wand", () -> Settings.wand, v -> {
+            Settings.wand = v;
+            Settings.save();
+        }, "Left/right-click with a golden axe sets pos1/pos2");
+        p.toggle("Quiet chat", () -> Settings.quietChat, v -> {
+            Settings.quietChat = v;
+            Settings.save();
+        }, "Only show errors in chat; everything else goes to the editor's status bar");
+        p.section("Outlines");
+        p.toggle("Selection box", () -> Settings.selectionParticles, v -> {
+            Settings.selectionParticles = v;
+            Settings.save();
+        }, "Green particles around pos1/pos2");
+        p.toggle("Preview box", () -> Settings.previewParticles, v -> {
+            Settings.previewParticles = v;
+            Settings.save();
+        }, "White particles around the last placement");
+        p.toggle("Path curve", () -> Settings.pathParticles, v -> {
+            Settings.pathParticles = v;
+            Settings.save();
+        }, "Flames along the path you're placing");
+        p.note("§8Saved in config/syrkbuilder.properties.");
+    }
+
+    private static int nearest(double[] values, double v) {
+        int best = 0;
+        for (int i = 1; i < values.length; i++) {
+            if (Math.abs(values[i] - v) < Math.abs(values[best] - v)) {
+                best = i;
+            }
+        }
+        return best;
+    }
+
+    private void keyRow(Panel p, String label, net.minecraft.client.KeyMapping mapping) {
+        p.add(p.x, p.y, 58, ROW, (g, ex, ey, ew, eh, hover) -> text(g, label, ex, ey + 4, DIM), null, null);
+        p.add(p.x + 70, p.y, p.w - 70, ROW, (g, ex, ey, ew, eh, hover) -> {
+            boolean waiting = rebinding == mapping;
+            box(g, ex, ey, ew, eh, waiting ? ACCENT_DARK : hover ? ITEM_HOVER : ITEM);
+            if (waiting) {
+                outline(g, ex, ey, ew, eh, ACCENT);
+            }
+            String name = waiting ? "press a key..." : KeyMappingHelper.getBoundKeyOf(mapping).getDisplayName().getString();
+            text(g, name, ex + (ew - font.width(name)) / 2, ey + 4, waiting ? TEXT : DIM);
+        }, () -> {
+            rebinding = mapping;
+            rebuildWidgets();
+        }, "Click, then press the key you want");
+        p.y += ROW + 4;
+    }
+
     private void fill(Panel p) {
         dev.syrkbuilder.core.shape.FloodFill.Mode[] modes = dev.syrkbuilder.core.shape.FloodFill.Mode.values();
         String[] names = new String[modes.length];
@@ -778,6 +867,14 @@ final class EditorScreen extends Screen {
         placeDrag(p, "Fill at target", "fill " + mode.id, () -> "fill " + blocks(fillBlocks.isBlank() ? "water" : fillBlocks) + " "
             + (fillRadius.isBlank() ? "12" : num(fillRadius)) + " mode=" + mode.id, () -> 1, true);
         p.note("§8Stops at the radius if the space isn't closed off.");
+    }
+
+    void openPicker(boolean gradientMode) {
+        ColorPicker.gradientMode(gradientMode);
+        openPicker(v -> {
+            shapeBlocks = v;
+            rebuildWidgets();
+        });
     }
 
     private void openPicker(Consumer<String> set) {
@@ -902,8 +999,7 @@ final class EditorScreen extends Screen {
     }
 
     private static boolean shiftDown() {
-        long window = GLFW.glfwGetCurrentContext();
-        return window != 0L && (down(window, GLFW.GLFW_KEY_LEFT_SHIFT) || down(window, GLFW.GLFW_KEY_RIGHT_SHIFT));
+        return down(GLFW.GLFW_KEY_LEFT_SHIFT) || down(GLFW.GLFW_KEY_RIGHT_SHIFT);
     }
 
     private void placeDrag(Panel p, String label, String clickLabel, java.util.function.Supplier<String> command,
@@ -1043,22 +1139,72 @@ final class EditorScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        if (picker != null && event.key() == GLFW.GLFW_KEY_ESCAPE) {
+        int key = event.key();
+        if (rebinding != null) {
+            if (key != GLFW.GLFW_KEY_ESCAPE) {
+                rebinding.setKey(InputConstants.Type.KEYSYM.getOrCreate(key));
+                net.minecraft.client.KeyMapping.resetMapping();
+                Minecraft.getInstance().options.save();
+            }
+            rebinding = null;
+            rebuildWidgets();
+            return true;
+        }
+        if (picker != null && key == GLFW.GLFW_KEY_ESCAPE) {
             picker = null;
             return true;
         }
-        if (!isTyping()) {
-            switch (event.key()) {
-                case GLFW.GLFW_KEY_LEFT, GLFW.GLFW_KEY_RIGHT, GLFW.GLFW_KEY_UP, GLFW.GLFW_KEY_DOWN, GLFW.GLFW_KEY_PAGE_UP,
-                     GLFW.GLFW_KEY_PAGE_DOWN, GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER, GLFW.GLFW_KEY_BACKSPACE,
-                     GLFW.GLFW_KEY_DELETE, GLFW.GLFW_KEY_TAB -> {
-                    return true;
-                }
-                default -> {
-                }
+        if (isTyping()) {
+            return super.keyPressed(event);
+        }
+        boolean ctrl = (event.modifiers() & (GLFW.GLFW_MOD_CONTROL | GLFW.GLFW_MOD_SUPER)) != 0;
+        boolean shift = (event.modifiers() & GLFW.GLFW_MOD_SHIFT) != 0;
+        if (!ctrl && isKey(SyrkBuilderClient.editorKey(), key)) {
+            onClose();
+            return true;
+        }
+        if (ctrl && (key == GLFW.GLFW_KEY_Z || key == GLFW.GLFW_KEY_Y)) {
+            run(key == GLFW.GLFW_KEY_Y || shift ? "redo" : "undo");
+            return true;
+        }
+        if (!ctrl && key >= GLFW.GLFW_KEY_1 && key <= GLFW.GLFW_KEY_9) {
+            selectTool(key - GLFW.GLFW_KEY_1);
+            return true;
+        }
+        if (!ctrl && key == GLFW.GLFW_KEY_0) {
+            selectTool(HISTORY);
+            return true;
+        }
+        ClientData.Pending pending = ClientData.pending();
+        if (pending != null && !ctrl) {
+            int n = shift ? 5 : 1;
+            String command = switch (key) {
+                case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> "confirm";
+                case GLFW.GLFW_KEY_DELETE, GLFW.GLFW_KEY_BACKSPACE -> "cancel";
+                case GLFW.GLFW_KEY_LEFT -> pending.movable() ? "nudge left " + n : null;
+                case GLFW.GLFW_KEY_RIGHT -> pending.movable() ? "nudge right " + n : null;
+                case GLFW.GLFW_KEY_UP -> pending.movable() ? "nudge forward " + n : null;
+                case GLFW.GLFW_KEY_DOWN -> pending.movable() ? "nudge back " + n : null;
+                case GLFW.GLFW_KEY_PAGE_UP -> pending.movable() ? "nudge up " + n : null;
+                case GLFW.GLFW_KEY_PAGE_DOWN -> pending.movable() ? "nudge down " + n : null;
+                case GLFW.GLFW_KEY_R -> pending.movable() ? "turn" : null;
+                default -> null;
+            };
+            if (command != null) {
+                run(command);
+                return true;
             }
         }
-        return super.keyPressed(event);
+        switch (key) {
+            case GLFW.GLFW_KEY_LEFT, GLFW.GLFW_KEY_RIGHT, GLFW.GLFW_KEY_UP, GLFW.GLFW_KEY_DOWN, GLFW.GLFW_KEY_PAGE_UP,
+                 GLFW.GLFW_KEY_PAGE_DOWN, GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER, GLFW.GLFW_KEY_BACKSPACE,
+                 GLFW.GLFW_KEY_DELETE, GLFW.GLFW_KEY_TAB -> {
+                return true;
+            }
+            default -> {
+                return super.keyPressed(event);
+            }
+        }
     }
 
     @Override
@@ -1124,7 +1270,7 @@ final class EditorScreen extends Screen {
         lookX = cx[0];
         lookY = cy[0];
         double s = mc.options.sensitivity().get() * 0.6 + 0.2;
-        double f = s * s * s * 8.0;
+        double f = s * s * s * 8.0 * Settings.lookSensitivity;
         if (dx != 0 || dy != 0) {
             mc.player.turn(dx * f, dy * f);
         }
@@ -1142,80 +1288,13 @@ final class EditorScreen extends Screen {
         }
     }
 
-    private void shortcuts() {
-        long window = GLFW.glfwGetCurrentContext();
-        if (window == 0L) {
-            return;
-        }
-        boolean close = down(window, GLFW.GLFW_KEY_F7);
-        if (close && !closeHeld) {
-            onClose();
-            return;
-        }
-        closeHeld = close;
-        if (isTyping()) {
-            undoHeld = redoHeld = false;
-            digitHeld = -1;
-            return;
-        }
-        boolean ctrl = down(window, GLFW.GLFW_KEY_LEFT_CONTROL) || down(window, GLFW.GLFW_KEY_RIGHT_CONTROL)
-            || down(window, GLFW.GLFW_KEY_LEFT_SUPER) || down(window, GLFW.GLFW_KEY_RIGHT_SUPER);
-        boolean shift = down(window, GLFW.GLFW_KEY_LEFT_SHIFT) || down(window, GLFW.GLFW_KEY_RIGHT_SHIFT);
-        boolean z = ctrl && down(window, GLFW.GLFW_KEY_Z);
-        boolean y = ctrl && down(window, GLFW.GLFW_KEY_Y);
-        boolean undo = z && !shift;
-        boolean redo = y || z && shift;
-        if (undo && !undoHeld) {
-            run("undo");
-        }
-        if (redo && !redoHeld) {
-            run("redo");
-        }
-        undoHeld = undo;
-        redoHeld = redo;
-        int digit = -1;
-        for (int i = 0; i < TOOLS.length; i++) {
-            int key = i < 9 ? GLFW.GLFW_KEY_1 + i : i == TOOLS.length - 1 ? GLFW.GLFW_KEY_0 : -1;
-            if (key >= 0 && down(window, key)) {
-                digit = i;
-            }
-        }
-        if (ClientData.pending() != null && !ctrl) {
-            int n = shift ? 5 : 1;
-            pressed(window, GLFW.GLFW_KEY_ENTER, () -> run("confirm"));
-            pressed(window, GLFW.GLFW_KEY_KP_ENTER, () -> run("confirm"));
-            pressed(window, GLFW.GLFW_KEY_DELETE, () -> run("cancel"));
-            pressed(window, GLFW.GLFW_KEY_BACKSPACE, () -> run("cancel"));
-            if (ClientData.pending().movable()) {
-                pressed(window, GLFW.GLFW_KEY_LEFT, () -> run("nudge left " + n));
-                pressed(window, GLFW.GLFW_KEY_RIGHT, () -> run("nudge right " + n));
-                pressed(window, GLFW.GLFW_KEY_UP, () -> run("nudge forward " + n));
-                pressed(window, GLFW.GLFW_KEY_DOWN, () -> run("nudge back " + n));
-                pressed(window, GLFW.GLFW_KEY_PAGE_UP, () -> run("nudge up " + n));
-                pressed(window, GLFW.GLFW_KEY_PAGE_DOWN, () -> run("nudge down " + n));
-                pressed(window, GLFW.GLFW_KEY_R, () -> run("turn"));
-            }
-        } else {
-            keysHeld.clear();
-        }
-        if (digit >= 0 && digit != digitHeld && !ctrl) {
-            selectTool(digit);
-        }
-        digitHeld = digit;
+    private static boolean isKey(net.minecraft.client.KeyMapping mapping, int key) {
+        InputConstants.Key bound = KeyMappingHelper.getBoundKeyOf(mapping);
+        return bound.getType() == InputConstants.Type.KEYSYM && bound.getValue() == key;
     }
 
-    private void pressed(long window, int key, Runnable action) {
-        if (down(window, key)) {
-            if (keysHeld.add(key)) {
-                action.run();
-            }
-        } else {
-            keysHeld.remove(key);
-        }
-    }
-
-    private static boolean down(long window, int key) {
-        return GLFW.glfwGetKey(window, key) == GLFW.GLFW_PRESS;
+    private static boolean down(int key) {
+        return InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), key);
     }
 
     @Override
@@ -1289,8 +1368,6 @@ final class EditorScreen extends Screen {
             updateLook();
             mouseX = -1;
             mouseY = -1;
-        } else {
-            shortcuts();
         }
         if (painting) {
             drag();

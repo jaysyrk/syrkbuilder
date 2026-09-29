@@ -175,6 +175,9 @@ public final class Engine<W, B> {
                 String mode = args.lower(1);
                 boolean on = mode.isEmpty() ? !session(player).preview() : mode.equals("on") || mode.equals("true");
                 session(player).preview(on);
+                if (args.flag("q")) {
+                    return;
+                }
                 reply.accept(on ? "&aPreview on&7: the last thing you place can be moved (/sb nudge), turned (/sb turn) or cancelled (/sb cancel) until you do something else."
                     : "&7Preview off: edits are final straight away (undo still works).");
                 return;

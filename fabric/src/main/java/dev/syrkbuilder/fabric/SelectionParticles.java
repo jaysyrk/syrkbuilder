@@ -15,11 +15,11 @@ final class SelectionParticles {
             return;
         }
         ClientData.Pending p = ClientData.pending();
-        if (p != null) {
+        if (p != null && Settings.previewParticles) {
             box(client.level, p.minX(), p.minY(), p.minZ(), p.maxX() + 1, p.maxY() + 1, p.maxZ() + 1, ParticleTypes.END_ROD);
         }
         java.util.List<int[]> path = ClientData.path();
-        if (!path.isEmpty()) {
+        if (!path.isEmpty() && Settings.pathParticles) {
             for (int[] q : path) {
                 client.level.addParticle(ParticleTypes.END_ROD, q[0] + 0.5, q[1] + 1.2, q[2] + 0.5, 0, 0.02, 0);
             }
@@ -31,7 +31,7 @@ final class SelectionParticles {
         }
         BlockPos a = Selection.pos1();
         BlockPos b = Selection.pos2();
-        if (a == null && b == null) {
+        if (a == null && b == null || !Settings.selectionParticles) {
             return;
         }
         if (a == null || b == null) {
