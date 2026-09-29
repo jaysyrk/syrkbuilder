@@ -29,7 +29,10 @@ public class SyrkBuilderClientTest implements FabricClientGameTest {
             c.options.framerateLimit().set(30);
         });
         try (TestSingleplayerContext world = context.worldBuilder()
-            .adjustSettings(creator -> creator.setGameMode(WorldCreationUiState.SelectedGameMode.CREATIVE))
+            .adjustSettings(creator -> {
+                creator.setGameMode(WorldCreationUiState.SelectedGameMode.CREATIVE);
+                creator.getGameRules().set(net.minecraft.world.level.gamerules.GameRules.SPAWN_CHUNK_RADIUS, 0, null);
+            })
             .create()) {
             world.getClientWorld().waitForChunksRender();
             TestServerContext server = world.getServer();
