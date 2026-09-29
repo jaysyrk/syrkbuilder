@@ -41,7 +41,7 @@ final class EditorScreen extends Screen {
     private static final int ROW = 16;
 
     private static final String[] TOOLS = {"Shapes", "Terrain", "Brushes", "Fill", "Trees", "Paths", "Selection", "Clipboard", "Import", "Scripts", "History", "Settings"};
-    private static final String[] ICONS = {"◆", "▲", "✎", "▼", "♣", "∿", "▣", "❐", "↓", "§", "⟲", "⚙"};
+    private static final String[] ICONS = {"◆", "▲", "✎", "▼", "♣", "∿", "▣", "❐", "↓", "✦", "⟲", "⚙"};
     private static final int HISTORY = 10;
     static final int SETTINGS = 11;
     private static final int BRUSHES = 2;
@@ -125,6 +125,7 @@ final class EditorScreen extends Screen {
     private double savedX;
     private double savedY;
     private net.minecraft.client.KeyMapping rebinding;
+    private boolean clearFocus;
     private ColorPicker picker;
     private Consumer<String> mainBlocks;
     private int seenData = -1;
@@ -182,6 +183,7 @@ final class EditorScreen extends Screen {
             }
         }
         seenData = ClientData.version();
+        clearFocus = true;
         pendingBar();
 
         for (int i = 0; i < TOOLS.length; i++) {
@@ -1364,6 +1366,10 @@ final class EditorScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        if (clearFocus) {
+            clearFocus = false;
+            setFocused(null);
+        }
         if (looking) {
             updateLook();
             mouseX = -1;
@@ -1431,11 +1437,11 @@ final class EditorScreen extends Screen {
                 : "§7target §f" + target.getX() + " " + target.getY() + " " + target.getZ();
             left = sel + "   §8•   " + aim + (primaryLabel == null ? "" : "   §8•   §7left-click: §f" + primaryLabel);
         }
-        text(g, fit(left, width - 16), 6, height - BOTTOM + 4, DIM);
-        String status = StatusLine.get();
-        if (!status.isEmpty() && hint == null && !looking) {
-            int w = font.width(status);
-            text(g, status, Math.max(LEFT_W + 8, width - 8 - w), height - BOTTOM + 4, TEXT);
+        String status = hint == null && !looking ? StatusLine.get() : "";
+        int statusW = status.isEmpty() ? 0 : Math.min(font.width(status), (width - 24) / 2);
+        text(g, fit(left, width - 22 - statusW), 6, height - BOTTOM + 4, DIM);
+        if (!status.isEmpty()) {
+            text(g, fit(status, statusW), width - 8 - statusW, height - BOTTOM + 4, TEXT);
         }
         if (picker != null) {
             picker.render(g, font, realX, realY);
