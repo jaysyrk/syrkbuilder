@@ -20,7 +20,7 @@ jobs:
       - name: Build
         run: |
           chmod +x gradlew
-          ./gradlew build --stacktrace
+          ./gradlew build --continue
 
       - uses: actions/upload-artifact@v4
         with:
