@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.2.0
 
 - Gradients can run any direction: `grad(down):`, east, west, north, south, `grad(in):` towards the centre, `grad(look):` the way you're facing, or any direction like `grad(1/0/1):`
 - Gradient brush strokes keep the gradient of their first dab, so overlapping dabs no longer lay new bands over each other
