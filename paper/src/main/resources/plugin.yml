@@ -14,3 +14,6 @@ permissions:
   syrkbuilder.noclip:
     description: Noclip flying (switches to spectator mode while on)
     default: op
+  syrkbuilder.script:
+    description: Run JavaScript build scripts, including ones uploaded from the player's computer
+    default: op

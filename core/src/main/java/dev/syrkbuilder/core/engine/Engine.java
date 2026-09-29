@@ -155,6 +155,13 @@ public final class Engine<W, B> {
         String key = key(player, world);
         dev.syrkbuilder.core.command.Args args = dev.syrkbuilder.core.command.Args.parse(request.command());
         String first = args.lower(0);
+        if (first.equals("script") || first.equals("upload-script")) {
+            String denied = platform.scriptDenied(player);
+            if (denied != null) {
+                reply.accept(denied);
+                return;
+            }
+        }
         switch (first) {
             case "sync" -> {
                 sendHistory(tree, reply);

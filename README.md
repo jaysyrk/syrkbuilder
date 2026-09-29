@@ -115,5 +115,6 @@ noise(x, z, scale)                     rand()                  print(...)
 ## Servers (coming soon)
 
 Install the Fabric mod on your client and the SyrkBuilder Paper plugin on a Paper 1.21.11 server. Players need
-`syrkbuilder.use`. Noclip on servers uses spectator mode and needs `syrkbuilder.noclip`. Limits (edit size,
-blocks per tick, history size, upload size, script time) are in `plugins/SyrkBuilder/config.yml`.
+`syrkbuilder.use`. Noclip on servers uses spectator mode and needs `syrkbuilder.noclip`. Scripts run on the
+server, so they need `syrkbuilder.script`; only give it to players you trust. Limits (edit size, blocks per
+tick, history size, upload size, script time) are in `plugins/SyrkBuilder/config.yml`.

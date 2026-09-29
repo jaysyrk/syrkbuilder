@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Fixed one damaged undo file (for example after a crash mid-save) wiping the whole history for that world. Now only that entry is skipped, and if it was the one you were on, you stay on the closest one that survived instead of jumping back to the start
+- History files are now written to a temporary file, flushed to disk and swapped in, so a crash can't leave half-written ones
+- Fixed `/sb restore` changing which branch the next redo follows
+- Scripts that recurse forever or use too much memory are now stopped with an error instead of crashing the game
+- Servers: scripts now need the `syrkbuilder.script` permission
+- Servers: a player can only have a few unfinished uploads at once, so they can't fill the server's memory
+
 ## 1.1.0
 
 - Selection edits: `move` (takes the selection along), `stack`, `hollow`, `overlay`, `naturalize`

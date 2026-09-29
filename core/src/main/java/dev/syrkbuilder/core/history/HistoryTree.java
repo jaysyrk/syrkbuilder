@@ -156,6 +156,10 @@ public final class HistoryTree<B> {
     }
 
     public List<Step<B>> pathTo(Node<B> target) {
+        return route(target, true);
+    }
+
+    private List<Step<B>> route(Node<B> target, boolean move) {
         List<Node<B>> up = new ArrayList<>();
         List<Node<B>> down = new ArrayList<>();
         Map<Node<B>, Integer> depthOfTarget = new HashMap<>();
@@ -174,21 +178,24 @@ public final class HistoryTree<B> {
         List<Step<B>> steps = new ArrayList<>();
         for (Node<B> n : up) {
             steps.add(new Step<>(n.change, true));
-            n.parent.preferred = n;
+            if (move) {
+                n.parent.preferred = n;
+            }
         }
         for (Node<B> n : down) {
             steps.add(new Step<>(n.change, false));
-            n.parent.preferred = n;
+            if (move) {
+                n.parent.preferred = n;
+            }
         }
-        current = target;
+        if (move) {
+            current = target;
+        }
         return steps;
     }
 
     public Map<Long, B> regionAt(Node<B> target, Box box) {
-        Node<B> saved = current;
-        List<Step<B>> steps = pathTo(target);
-        current = saved;
-        restorePreferences(saved);
+        List<Step<B>> steps = route(target, false);
         Map<Long, B> result = new LinkedHashMap<>();
         for (Step<B> step : steps) {
             ChangeSet<B> c = step.change();
@@ -203,12 +210,6 @@ public final class HistoryTree<B> {
             }
         }
         return result;
-    }
-
-    private void restorePreferences(Node<B> node) {
-        for (Node<B> n = node; n.parent != null; n = n.parent) {
-            n.parent.preferred = n;
-        }
     }
 
     private static <B> void put(Map<Long, B> map, Box box, long packed, B state) {
@@ -346,7 +347,14 @@ public final class HistoryTree<B> {
             }
         }
         tree.nextId = Math.max(tree.nextId, tree.root.id + 1);
-        Node<B> cur = tree.byId.get(currentId);
+        // If the entry you were on couldn't be loaded, stay on its closest surviving ancestor rather than
+        // jumping back to the start, so undo still lines up with what's actually in the world.
+        Node<B> cur = null;
+        NodeInfo info = infoById.get(currentId);
+        for (int hops = 0; cur == null && info != null && hops <= infos.size(); hops++) {
+            cur = tree.byId.get(info.id());
+            info = infoById.get(info.parent());
+        }
         tree.current = cur == null ? tree.root : cur;
         return tree;
     }

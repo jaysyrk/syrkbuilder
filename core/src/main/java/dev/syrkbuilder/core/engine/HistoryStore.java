@@ -11,6 +11,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +75,8 @@ final class HistoryStore {
                         }
                         try (DataInputStream cin = new DataInputStream(new BufferedInputStream(new GZIPInputStream(new FileInputStream(f))))) {
                             changes.put(n.id(), HistoryCodec.readChange(cin, STRINGS));
+                        } catch (IOException | RuntimeException e) {
+                            logger.warning("Skipping unreadable history entry " + key + "/" + n.id() + ": " + e.getMessage());
                         }
                     }
                     result = new Loaded(idx, changes);
@@ -85,9 +92,12 @@ final class HistoryStore {
         io.execute(() -> {
             File dir = dir(key);
             dir.mkdirs();
-            File f = new File(dir, id + ".sbc");
-            try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(f))))) {
-                HistoryCodec.writeChange(out, change, STRINGS);
+            File tmp = new File(dir, id + ".sbc.tmp");
+            try {
+                try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(tmp))))) {
+                    HistoryCodec.writeChange(out, change, STRINGS);
+                }
+                commit(tmp, new File(dir, id + ".sbc"));
             } catch (IOException e) {
                 logger.warning("Couldn't save history " + key + "/" + id + ": " + e.getMessage());
             }
@@ -98,22 +108,32 @@ final class HistoryStore {
         io.execute(() -> {
             File dir = dir(key);
             dir.mkdirs();
-            for (int id : removed) {
-                new File(dir, id + ".sbc").delete();
-            }
             File tmp = new File(dir, "index.sbi.tmp");
-            try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(tmp)))) {
-                HistoryCodec.writeIndex(out, nodes, currentId);
+            try {
+                try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(tmp)))) {
+                    HistoryCodec.writeIndex(out, nodes, currentId);
+                }
+                commit(tmp, new File(dir, "index.sbi"));
             } catch (IOException e) {
                 logger.warning("Couldn't save history index " + key + ": " + e.getMessage());
                 return;
             }
-            File index = new File(dir, "index.sbi");
-            index.delete();
-            if (!tmp.renameTo(index)) {
-                logger.warning("Couldn't replace history index " + key);
+            for (int id : removed) {
+                new File(dir, id + ".sbc").delete();
             }
         });
+    }
+
+    // Flush to disk, then swap in with one rename, so a crash leaves either the old file or the new one, never half of one.
+    private static void commit(File tmp, File target) throws IOException {
+        try (FileChannel channel = FileChannel.open(tmp.toPath(), StandardOpenOption.WRITE)) {
+            channel.force(true);
+        }
+        try {
+            Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException e) {
+            Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        }
     }
 
     void shutdown() {

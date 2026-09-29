@@ -20,6 +20,8 @@ import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Undefined;
 
 public final class ScriptRunner {
+    private static final int MAX_STACK_DEPTH = 2000;
+
     public static final class ScriptFailure extends Exception {
         public ScriptFailure(String message) {
             super(message);
@@ -83,6 +85,7 @@ public final class ScriptRunner {
         Context cx = factory.enterContext();
         try {
             cx.setOptimizationLevel(-1);
+            cx.setMaximumInterpreterStackDepth(MAX_STACK_DEPTH);
             cx.setLanguageVersion(Context.VERSION_ES6);
             cx.setInstructionObserverThreshold(5000);
             cx.setClassShutter(className -> false);
@@ -159,6 +162,10 @@ public final class ScriptRunner {
             cx.evaluateString(scope, source, name, 1, null);
         } catch (Timeout t) {
             throw new ScriptFailure("Script took longer than " + timeoutMillis + " ms and was stopped.");
+        } catch (OutOfMemoryError e) {
+            // A runaway script can fill the heap faster than the timeout fires. Everything it allocated
+            // becomes unreachable once we unwind, so report it instead of taking the game or server down.
+            throw new ScriptFailure("Script used too much memory and was stopped.");
         } catch (RhinoException e) {
             throw new ScriptFailure(e.details() + " (" + name + " line " + e.lineNumber() + ")");
         } catch (IllegalArgumentException | IllegalStateException e) {
