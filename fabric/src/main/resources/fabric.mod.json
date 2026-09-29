@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "syrkbuilder",
+  "version": "${version}",
+  "name": "SyrkBuilder",
+  "description": "A full building editor: shapes, terrain generation, sculpting brushes, trees, paths, fills, colour gradients, model and schematic import, JavaScript scripting, noclip, live preview and branching undo history you never lose. Works in singleplayer on its own; on servers it needs the SyrkBuilder plugin.",
+  "authors": ["Syrk"],
+  "contact": {
+    "sources": "https://github.com/jaysyrk/syrkbuilder",
+    "issues": "https://github.com/jaysyrk/syrkbuilder/issues"
+  },
+  "license": "All-Rights-Reserved",
+  "icon": "assets/syrkbuilder/icon.png",
+  "environment": "client",
+  "mixins": ["syrkbuilder.mixins.json"],
+  "entrypoints": {
+    "client": ["dev.syrkbuilder.fabric.SyrkBuilderClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "fabric-api": "*",
+    "minecraft": "~1.21.11",
+    "java": ">=21"
+  }
+}

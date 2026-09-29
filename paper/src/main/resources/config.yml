@@ -1,0 +1,6 @@
+max-volume: 4000000
+blocks-per-tick: 40000
+history-blocks: 5000000
+save-history: true
+max-upload-mb: 32
+script-timeout-ms: 3000

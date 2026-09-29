@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.syrkbuilder.fabric.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": ["PlayerMixin"],
+  "client": ["LocalPlayerMixin"],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

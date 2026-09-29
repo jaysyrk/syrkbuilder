@@ -1,0 +1,13 @@
+subprojects {
+    group = project.maven_group
+    version = "${project.mod_version}+${project.minecraft_version}"
+
+    repositories {
+        mavenCentral()
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+        options.release = 21
+    }
+}

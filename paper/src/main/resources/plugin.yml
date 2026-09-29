@@ -1,0 +1,16 @@
+name: SyrkBuilder
+version: '${version}'
+main: dev.syrkbuilder.paper.SyrkBuilderPlugin
+api-version: '1.21'
+author: Syrk
+description: Server side of the SyrkBuilder building mod. Applies edits and keeps undo history for players using the mod.
+libraries:
+  - org.mozilla:rhino:1.7.15
+
+permissions:
+  syrkbuilder.use:
+    description: Use SyrkBuilder
+    default: op
+  syrkbuilder.noclip:
+    description: Noclip flying (switches to spectator mode while on)
+    default: op

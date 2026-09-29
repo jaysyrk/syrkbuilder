@@ -1,0 +1,24 @@
+plugins {
+    id 'java'
+}
+
+repositories {
+    maven { name = 'papermc'; url = 'https://repo.papermc.io/repository/maven-public/' }
+}
+
+dependencies {
+    compileOnly "io.papermc.paper:paper-api:${project.paper_api_version}"
+    compileOnly 'org.mozilla:rhino:1.7.15'
+    implementation project(':core')
+}
+
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('plugin.yml') { expand version: project.version }
+}
+
+jar {
+    archiveBaseName = 'syrkbuilder-paper'
+    dependsOn ':core:jar'
+    from { project(':core').sourceSets.main.output }
+}

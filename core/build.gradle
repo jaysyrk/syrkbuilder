@@ -1,0 +1,18 @@
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    compileOnly 'org.mozilla:rhino:1.7.15'
+    testImplementation 'org.mozilla:rhino:1.7.15'
+}
+
+tasks.register('selfTest', JavaExec) {
+    group = 'verification'
+    description = 'Runs the core shape/terrain/history/template/script/model tests.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'dev.syrkbuilder.core.CoreSelfTest'
+    systemProperty 'java.awt.headless', 'true'
+}
+tasks.named('check') { dependsOn 'selfTest' }
+tasks.named('test') { enabled = false }
