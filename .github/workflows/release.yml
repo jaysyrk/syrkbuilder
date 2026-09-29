@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        run: |
+          chmod +x gradlew
+          ./gradlew build
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=$(grep '^mod_version=' gradle.properties | cut -d= -f2)
+          mc=$(grep '^minecraft_version=' gradle.properties | cut -d= -f2)
+          awk -v head="## $version" '$0 == head {f = 1; next} /^## / {f = 0} f' CHANGELOG.md > notes.md
+          jar="fabric/build/libs/syrkbuilder-fabric-$version+$mc.jar"
+          ls -la fabric/build/libs
+          gh release create "$GITHUB_REF_NAME" "$jar" --title "SyrkBuilder $version for Minecraft $mc" --notes-file notes.md
