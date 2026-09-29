@@ -1186,7 +1186,7 @@ public final class CoreSelfTest {
             && slab.blockId(0, 102, 0).endsWith("air"), slab.blockId(0, 102, 0));
 
         FlatWorld b = meadow();
-        int blob = b.run(brush(b, "brush blob 4 stone", new int[]{0, 80, 0}).stream());
+        int blob = b.run(brush(b, "brush blob 4 stone seed=1", new int[]{0, 80, 0}).stream());
         check("blob makes a lumpy ball", blob > 100 && blob < 900 && b.blockState(0, 80, 0).equals("minecraft:stone"), blob);
         FlatWorld cv = meadow();
         cv.run(brush(cv, "brush carve 3", new int[]{0, 62, 0}).stream());
@@ -1212,8 +1212,11 @@ public final class CoreSelfTest {
         check("deflate shaves a layer and its plants", de.blockId(0, 64, 0).endsWith("air") && de.blockId(0, 65, 0).endsWith("air")
             && de.blockId(0, 63, 0).equals("minecraft:dirt"), de.blockId(0, 65, 0));
         FlatWorld ro = meadow();
-        int rough = ro.run(brush(ro, "brush roughen 5 strength=1", new int[]{0, 64, 0}).stream());
-        check("roughen bumps and pits the surface", rough > 5 && ro.blockId(0, 55, 0).equals("minecraft:stone"), rough);
+        int rough = ro.run(brush(ro, "brush roughen 5 strength=1 seed=1", new int[]{0, 64, 0}).stream());
+        check("roughen bumps and pits the surface", rough > 20 && ro.blockId(0, 55, 0).equals("minecraft:stone"), rough);
+        FlatWorld again = meadow();
+        again.run(brush(again, "brush roughen 5 strength=1 seed=1", new int[]{0, 64, 0}).stream());
+        check("same brush seed, same result", again.blocks.equals(ro.blocks), "");
         FlatWorld dc = meadow();
         dc.run(brush(dc, "brush decay 3 density=1", new int[]{0, 64, 0}).stream());
         check("decay crumbles exposed blocks", dc.blockId(0, 64, 0).endsWith("air") && dc.blockId(0, 63, 0).equals("minecraft:dirt"), dc.blockId(0, 64, 0));

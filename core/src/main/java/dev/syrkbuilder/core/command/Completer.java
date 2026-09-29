@@ -41,7 +41,7 @@ public final class Completer {
         Map.entry("helix", new Spec(List.of(Kind.BLOCKS, Kind.NUMBER, Kind.NUMBER), List.of("6", "20"), List.of("turns=", "thickness="), List.of("-a"))),
         Map.entry("terrain", new Spec(List.of(Kind.TERRAIN), List.of(), TERRAIN_OPTIONS, List.of())),
         Map.entry("brush", new Spec(List.of(Kind.BRUSH, Kind.NUMBER, Kind.BLOCKS), List.of("3", "5", "8"),
-            List.of("strength=", "density=", "depth=", "height=", "scale=", "from=", "type=", "rx=", "ry=", "rz="), List.of("-r"))),
+            List.of("strength=", "density=", "depth=", "height=", "scale=", "from=", "type=", "rx=", "ry=", "rz=", "seed="), List.of("-r"))),
         Map.entry("copy", spec(List.of())),
         Map.entry("paste", new Spec(List.of(), List.of(), PASTE_OPTIONS, List.of("-a", "-flip"))),
         Map.entry("rotate", spec(List.of(Kind.ROTATION))),

@@ -962,7 +962,7 @@ public final class Commands {
             : null;
         dev.syrkbuilder.core.brush.Brushes.Settings settings = new dev.syrkbuilder.core.brush.Brushes.Settings(type, radius, rx, ry, rz, pattern, strength,
             density, a.intValue("depth", 1, 1, 16), a.intValue("height", 1, 1, 16),
-            a.doubleValue("scale", 0, 0, 256), a.flag("r"), from, System.nanoTime(), a.string("type", "oak"), frame);
+            a.doubleValue("scale", 0, 0, 256), a.flag("r"), from, a.longValue("seed", System.nanoTime()), a.string("type", "oak"), frame);
         if (type == dev.syrkbuilder.core.brush.BrushType.TREES) {
             dev.syrkbuilder.core.brush.Brushes.treeTypes(settings.variant());
         }
