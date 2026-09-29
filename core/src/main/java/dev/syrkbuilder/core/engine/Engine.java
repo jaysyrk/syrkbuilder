@@ -752,6 +752,6 @@ public final class Engine<W, B> {
     }
 
     public boolean busy() {
-        return !queues.isEmpty();
+        return !queues.isEmpty() || !waitingForHistory.isEmpty();
     }
 }

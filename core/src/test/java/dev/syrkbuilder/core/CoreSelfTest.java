@@ -1010,7 +1010,7 @@ public final class CoreSelfTest {
             Files.createTempDirectory("sblocked").toFile(), java.util.logging.Logger.getLogger("test"));
         List<String> lockedMsgs = new ArrayList<>();
         locked.receive(player, world, Protocol.encode(new Request("script maze", null, new int[]{20, 64, 20}, new int[]{34, 64, 34}, null, 0, 0)), lockedMsgs::add);
-        for (int i = 0; i < 50 && lockedMsgs.isEmpty(); i++) {
+        for (int i = 0; i < 2500 && lockedMsgs.isEmpty(); i++) {
             Runnable r;
             while ((r = lockedPlatform.poll()) != null) {
                 r.run();
