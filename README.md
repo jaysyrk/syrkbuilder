@@ -56,9 +56,9 @@ palette, or build a gradient between two colours. Blocks can be mixes (`60%stone
 - `grad(down):`, `grad(east):`, `grad(west):`, `grad(north):`, `grad(south):` pick another direction, `grad(out):`
   and `grad(in):` run from the centre or towards it, `grad(look):` follows where you're facing, and `grad(1/0/1):`
   takes any direction
+- a brush stroke keeps the gradient of its first dab, so overlapping dabs don't lay new bands over each other
 - add a range to pin the ends to the world, e.g. `grad(up,60..90):stone,andesite,snow_block` puts stone at y 60 and
-  snow at y 90. A brush stroke then blends as one gradient instead of restarting in every dab. In the colour picker,
-  aim and click Start at aim and End at aim
+  snow at y 90, however far the stroke goes. In the colour picker, aim and click Start at aim and End at aim
 
 Brushes take `rx=`, `ry=` and `rz=` to give them their own size on each axis, e.g. `/sb brush sphere 8 stone ry=2`
 paints a flat disc. In the editor, turn on Stretch per axis.

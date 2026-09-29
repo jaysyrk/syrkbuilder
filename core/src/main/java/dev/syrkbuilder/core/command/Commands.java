@@ -127,7 +127,7 @@ public final class Commands {
                 case "tree" -> tree(req, a, world);
                 case "fill" -> fill(req, a, world);
                 case "path" -> path(req, a, world, session);
-                case "brush", "b" -> a.lower(1).equals("stamp") ? stamp(req, a, session) : brush(req, a, world);
+                case "brush", "b" -> a.lower(1).equals("stamp") ? stamp(req, a, session) : brush(req, a, world, session);
                 case "gradient", "grad" -> gradient(a);
                 case "mask" -> mask(a, session);
                 case "symmetry", "sym", "mirror" -> symmetry(req, a, session);
@@ -918,7 +918,7 @@ public final class Commands {
         }
     }
 
-    private Result brush(Request req, Args a, WorldView world) {
+    private Result brush(Request req, Args a, WorldView world, Session session) {
         String typeName = a.lower(1);
         if (typeName.isEmpty() || typeName.equals("list")) {
             List<String> lines = new ArrayList<>();
@@ -955,15 +955,18 @@ public final class Commands {
                 from.add(Pattern.baseId(b));
             }
         }
+        int[] t = anchor(req);
+        int stroke = a.intValue("stroke", 0, Integer.MIN_VALUE, Integer.MAX_VALUE);
+        Box frame = stroke != 0 && pattern != null && pattern.fitsBounds()
+            ? session.strokeFrame(stroke, new Box(t[0] - rx, t[1] - ry, t[2] - rz, t[0] + rx, t[1] + ry, t[2] + rz))
+            : null;
         dev.syrkbuilder.core.brush.Brushes.Settings settings = new dev.syrkbuilder.core.brush.Brushes.Settings(type, radius, rx, ry, rz, pattern, strength,
             density, a.intValue("depth", 1, 1, 16), a.intValue("height", 1, 1, 16),
-            a.doubleValue("scale", 0, 0, 256), a.flag("r"), from, System.nanoTime(), a.string("type", "oak"));
+            a.doubleValue("scale", 0, 0, 256), a.flag("r"), from, System.nanoTime(), a.string("type", "oak"), frame);
         if (type == dev.syrkbuilder.core.brush.BrushType.TREES) {
             dev.syrkbuilder.core.brush.Brushes.treeTypes(settings.variant());
         }
-        int[] t = anchor(req);
         dev.syrkbuilder.core.edit.EditBuffer edits = dev.syrkbuilder.core.brush.Brushes.apply(settings, world, t[0], t[1], t[2], maxVolume);
-        int stroke = a.intValue("stroke", 0, Integer.MIN_VALUE, Integer.MAX_VALUE);
         return new Result(Result.Kind.EDIT, "brush " + type.id(), edits, stroke, List.of(), null, List.of(), null);
     }
 
