@@ -18,6 +18,7 @@ public final class Completer {
     private record Spec(List<Kind> args, List<String> numberHints, List<String> options, List<String> flags) {
     }
 
+    public static final java.util.regex.Pattern GRADIENT_PREFIX = java.util.regex.Pattern.compile("^grad(?:[xyzr]|\\([^)]*\\))?:");
     private static final List<String> PASTE_OPTIONS = List.of("rotate=", "swap=", "up=");
     private static final List<String> TERRAIN_OPTIONS = List.of("radius=", "height=", "style=", "seed=", "erosion=", "roughness=",
         "peaks=", "steps=", "width=", "angle=");
@@ -40,7 +41,7 @@ public final class Completer {
         Map.entry("helix", new Spec(List.of(Kind.BLOCKS, Kind.NUMBER, Kind.NUMBER), List.of("6", "20"), List.of("turns=", "thickness="), List.of("-a"))),
         Map.entry("terrain", new Spec(List.of(Kind.TERRAIN), List.of(), TERRAIN_OPTIONS, List.of())),
         Map.entry("brush", new Spec(List.of(Kind.BRUSH, Kind.NUMBER, Kind.BLOCKS), List.of("3", "5", "8"),
-            List.of("strength=", "density=", "depth=", "height=", "scale=", "from=", "type="), List.of("-r"))),
+            List.of("strength=", "density=", "depth=", "height=", "scale=", "from=", "type=", "rx=", "ry=", "rz="), List.of("-r"))),
         Map.entry("copy", spec(List.of())),
         Map.entry("paste", new Spec(List.of(), List.of(), PASTE_OPTIONS, List.of("-a", "-flip"))),
         Map.entry("rotate", spec(List.of(Kind.ROTATION))),
@@ -298,7 +299,7 @@ public final class Completer {
 
     private List<String> blocks(String word) {
         int lead = word.startsWith("!") ? 1 : 0;
-        java.util.regex.Matcher g = java.util.regex.Pattern.compile("^grad[xyzr]?:").matcher(word);
+        java.util.regex.Matcher g = GRADIENT_PREFIX.matcher(word);
         if (g.find()) {
             lead = g.end();
         }

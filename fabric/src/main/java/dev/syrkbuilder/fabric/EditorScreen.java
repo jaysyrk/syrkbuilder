@@ -78,6 +78,10 @@ final class EditorScreen extends Screen {
     private static String brushScale = "";
     private static String brushDepth = "1";
     private static boolean brushReplaceTop;
+    private static boolean brushStretch;
+    private static String brushRx = "";
+    private static String brushRy = "";
+    private static String brushRz = "";
     private static int selAction;
     private static String selBlocks = "stone";
     private static String selFrom = "air";
@@ -593,10 +597,20 @@ final class EditorScreen extends Screen {
         p.field(type == BrushType.STAMP ? "Spacing" : "Radius", brushRadius, "1-" + type.maxRadius(), v -> brushRadius = v);
         if (type == BrushType.STAMP) {
             p.note("§8Copy something first (Clipboard tab). Drag to stamp it along the way.");
+        } else {
+            p.toggle("Stretch per axis", () -> brushStretch, v -> brushStretch = v, "Give the brush its own size on each axis");
+            if (brushStretch) {
+                p.field("Radius X", brushRx, "same as radius", v -> brushRx = v);
+                if (!type.flat()) {
+                    p.field("Radius Y", brushRy, "same as radius", v -> brushRy = v);
+                }
+                p.field("Radius Z", brushRz, "same as radius", v -> brushRz = v);
+            }
         }
         if (type.needsBlocks) {
             boolean optional = type.blocks == BrushType.Blocks.OPTIONAL;
             p.blocksField("Blocks", brushBlocks, optional ? "touching block" : "stone", v -> brushBlocks = v);
+            p.note("§8For a gradient that blends across a whole stroke, set Start and End at aim in the colour picker.");
         }
         if (type.usesStrength()) {
             p.field("Strength", brushStrength, type.strengthInBlocks() ? (int) type.defaultStrength + " (blocks)" : String.valueOf(type.defaultStrength),
@@ -647,6 +661,17 @@ final class EditorScreen extends Screen {
         }
         if (type == BrushType.OVERLAY) {
             sb.append(" depth=").append(num(brushDepth)).append(brushReplaceTop ? " -r" : "");
+        }
+        if (brushStretch && type != BrushType.STAMP) {
+            if (!brushRx.isBlank()) {
+                sb.append(" rx=").append(num(brushRx));
+            }
+            if (!brushRy.isBlank() && !type.flat()) {
+                sb.append(" ry=").append(num(brushRy));
+            }
+            if (!brushRz.isBlank()) {
+                sb.append(" rz=").append(num(brushRz));
+            }
         }
         return sb.toString();
     }
@@ -973,7 +998,7 @@ final class EditorScreen extends Screen {
         if (pattern == null || pattern.isBlank()) {
             return null;
         }
-        String first = pattern.replaceFirst("^grad[xyzr]?:", "").split(",")[0];
+        String first = dev.syrkbuilder.core.command.Completer.GRADIENT_PREFIX.matcher(pattern).replaceFirst("").split(",")[0];
         first = first.contains("%") ? first.substring(first.indexOf('%') + 1) : first;
         return dev.syrkbuilder.core.model.BlockPalette.colorOf(first);
     }

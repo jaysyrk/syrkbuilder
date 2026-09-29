@@ -30,11 +30,15 @@ final class ColorPicker {
     private static final String[] PALETTES = {"all", "concrete", "wool", "terracotta", "natural", "wood"};
     private static final String[] PALETTE_LABELS = {"all", "conc.", "wool", "terra.", "stone", "wood"};
     private static final int[] STEPS = {3, 4, 5, 6, 8, 10};
-    private static final String[] AXES = {"up", "x", "z", "round"};
-    private static final String[] AXIS_PREFIX = {"grad:", "gradx:", "gradz:", "gradr:"};
+    private static final String[] DIRECTIONS = {"up", "down", "+x", "-x", "+z", "-z", "look", "out", "in"};
+    private static final String[] DIRECTION_WORDS = {"up", "down", "east", "west", "south", "north", null, "out", "in"};
+    private static final String[] DIRECTION_HINTS = {"Bottom to top", "Top to bottom", "Along +x (east)", "Along -x (west)",
+        "Along +z (south)", "Along -z (north)", "The way you're looking now - click again to re-aim", "Centre outwards", "Edge inwards"};
+    private static final int LOOK = 6;
 
     static final int W = 240;
-    static final int H = 234;
+    static final int H = 258;
+    private static final int GRADIENT_ROWS = 36;
 
     private static float hue = 25;
     private static float sat = 0.75f;
@@ -44,7 +48,10 @@ final class ColorPicker {
     private static final int[] ends = {0x3A3A3A, 0xE9ECEC};
     private static int editing;
     private static int steps = 2;
-    private static int axis;
+    private static int direction;
+    private static String lookToken = "0/1/0";
+    private static Double rangeFrom;
+    private static Double rangeTo;
 
     private static final Map<String, ItemStack> ICONS = new HashMap<>();
 
@@ -70,7 +77,23 @@ final class ColorPicker {
     }
 
     boolean contains(double mx, double my) {
-        return mx >= x && mx < x + W && my >= y && my < y + H;
+        return mx >= x && mx < x + W && my >= y && my < y + height();
+    }
+
+    private static int height() {
+        return gradient ? H : H - GRADIENT_ROWS;
+    }
+
+    private int rowsTop() {
+        return y + SQ_Y + SQ + 6;
+    }
+
+    private int paletteY() {
+        return rowsTop() + (gradient ? GRADIENT_ROWS : 0);
+    }
+
+    private int blocksTop() {
+        return paletteY() + 20;
     }
 
     static int hsv(float h, float s, float v) {
@@ -185,12 +208,70 @@ final class ColorPicker {
     }
 
     private String gradientPattern() {
-        List<String> blocks = gradientBlocks();
+        List<String> names = new ArrayList<>();
+        for (String b : gradientBlocks()) {
+            names.add(shortId(b));
+        }
+        String opts = direction == LOOK ? lookToken : DIRECTION_WORDS[direction];
+        boolean ranged = hasRange();
+        if (ranged) {
+            opts += "," + number(rangeFrom) + ".." + number(rangeTo);
+        }
+        return (direction == 0 && !ranged ? "grad:" : "grad(" + opts + "):") + String.join(",", names);
+    }
+
+    private static String palettePattern(List<String> blocks) {
         List<String> names = new ArrayList<>();
         for (String b : blocks) {
             names.add(shortId(b));
         }
-        return AXIS_PREFIX[axis] + String.join(",", names);
+        return String.join(",", names);
+    }
+
+    private static boolean radial() {
+        return direction > LOOK;
+    }
+
+    private static boolean hasRange() {
+        return rangeFrom != null && rangeTo != null && !radial();
+    }
+
+    // Where the aimed block sits along the gradient's direction, measured the same way the gradient measures it.
+    private static Double aimedAlong() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) {
+            return null;
+        }
+        BlockPos pos = SyrkBuilderClient.lookedAt(mc.player);
+        if (pos == null) {
+            return null;
+        }
+        return switch (direction) {
+            case 0, 1 -> (double) pos.getY();
+            case 2, 3 -> (double) pos.getX();
+            case 4, 5 -> (double) pos.getZ();
+            default -> {
+                String[] c = lookToken.split("/");
+                double dx = Double.parseDouble(c[0]);
+                double dy = Double.parseDouble(c[1]);
+                double dz = Double.parseDouble(c[2]);
+                double len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                yield (pos.getX() * dx + pos.getY() * dy + pos.getZ() * dz) / len;
+            }
+        };
+    }
+
+    private static void aimLook() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) {
+            return;
+        }
+        net.minecraft.world.phys.Vec3 v = mc.player.getViewVector(1f);
+        lookToken = number(v.x) + "/" + number(v.y) + "/" + number(v.z);
+    }
+
+    private static String number(double v) {
+        return java.math.BigDecimal.valueOf(Math.round(v * 10000) / 10000.0).stripTrailingZeros().toPlainString();
     }
 
     private static final int SQ_X = 8;
@@ -201,8 +282,9 @@ final class ColorPicker {
 
     void render(GuiGraphics g, Font font, int mx, int my) {
         hover = null;
-        g.fill(x - 1, y - 1, x + W + 1, y + H + 1, EDGE);
-        g.fill(x, y, x + W, y + H, BG);
+        int h = height();
+        g.fill(x - 1, y - 1, x + W + 1, y + h + 1, EDGE);
+        g.fill(x, y, x + W, y + h, BG);
         tab(g, font, x + 8, y + 5, "Colour", !gradient, mx, my);
         tab(g, font, x + 60, y + 5, "Gradient", gradient, mx, my);
         boolean closeHover = mx >= x + W - 18 && mx < x + W - 4 && my >= y + 4 && my < y + 18;
@@ -246,14 +328,25 @@ final class ColorPicker {
                 }
             }
             button(g, font, rx, y + SQ_Y + 46, rw, "Eyedropper", "Set the selected end to the colour of the block you aim at", mx, my, false);
-            segments(g, font, rx, y + SQ_Y + 64, rw, labels(STEPS), steps, mx, my, "Steps");
-            segments(g, font, rx, y + SQ_Y + 80, rw, AXES, axis, mx, my, "Direction: bottom to top, along x, along z, or centre outwards");
+            segments(g, font, rx, y + SQ_Y + 64, rw, labels(STEPS), steps, mx, my, repeat("Steps", STEPS.length));
+            int ry = rowsTop();
+            segments(g, font, x + 8, ry, W - 16, DIRECTIONS, direction, mx, my, DIRECTION_HINTS);
+            if (radial()) {
+                text(g, font, "Range works with straight directions", x + 8, ry + 21, DIM);
+            } else {
+                int bw = (W - 16 - 6) / 3;
+                button(g, font, x + 8, ry + 18, bw, rangeFrom == null ? "Start at aim" : "from " + number(rangeFrom),
+                    "Aim where the first block should go, then click", mx, my, false);
+                button(g, font, x + 8 + bw + 3, ry + 18, bw, rangeTo == null ? "End at aim" : "to " + number(rangeTo),
+                    "Aim where the last block should go, then click", mx, my, false);
+                button(g, font, x + 8 + (bw + 3) * 2, ry + 18, W - 16 - (bw + 3) * 2, hasRange() ? "Fit" : "Fit ✓",
+                    "No range: the gradient stretches over each shape or brush dab", mx, my, false);
+            }
         }
 
-        int py = y + SQ_Y + SQ + 6;
-        segments(g, font, x + 8, py, W - 16, PALETTE_LABELS, palette, mx, my, "Which blocks to choose from");
+        segments(g, font, x + 8, paletteY(), W - 16, PALETTE_LABELS, palette, mx, my, repeat("Which blocks to choose from", PALETTE_LABELS.length));
 
-        int by = py + 20;
+        int by = blocksTop();
         List<String> blocks = gradient ? gradientBlocks() : nearest();
         int cw = (W - 16) / 6;
         for (int i = 0; i < blocks.size(); i++) {
@@ -276,9 +369,17 @@ final class ColorPicker {
         }
         if (gradient) {
             button(g, font, x + 8, useY(by, blocks.size()), W - 16, "Use gradient", gradientPattern(), mx, my, true);
+        } else if (!blocks.isEmpty()) {
+            button(g, font, x + 8, useY(by, blocks.size()), W - 16, "Use palette", "Mix all " + blocks.size() + " blocks shown, evenly", mx, my, true);
         }
         String foot = hover != null ? hover : gradient ? "Pick two colours; the blocks between are blended." : "Pick a colour; click a block to use it.";
-        text(g, font, fit(font, foot, W - 16), x + 8, y + H - 12, DIM);
+        text(g, font, fit(font, foot, W - 16), x + 8, y + h - 12, DIM);
+    }
+
+    private static String[] repeat(String s, int n) {
+        String[] out = new String[n];
+        java.util.Arrays.fill(out, s);
+        return out;
     }
 
     private static String[] labels(int[] values) {
@@ -305,10 +406,10 @@ final class ColorPicker {
             }
             return true;
         }
-        int blocksTop = y + SQ_Y + SQ + 26;
-        int use = useY(blocksTop, gradient ? gradientBlocks().size() : 0);
-        if (gradient && my >= use && my < use + 14 && mx >= x + 8 && mx < x + W - 8) {
-            target.accept(gradientPattern());
+        List<String> blocks = gradient ? gradientBlocks() : nearest();
+        int use = useY(blocksTop(), blocks.size());
+        if (my >= use && my < use + 14 && mx >= x + 8 && mx < x + W - 8 && (gradient || !blocks.isEmpty())) {
+            target.accept(gradient ? gradientPattern() : palettePattern(blocks));
             close.run();
             return true;
         }
@@ -347,19 +448,46 @@ final class ColorPicker {
                     eyedropper();
                 } else if (in(my, y + SQ_Y + 64)) {
                     steps = segment(mx, rx, rw, STEPS.length);
-                } else if (in(my, y + SQ_Y + 80)) {
-                    axis = segment(mx, rx, rw, AXES.length);
                 }
             }
             return true;
         }
-        int py = y + SQ_Y + SQ + 6;
-        if (in(my, py) && mx >= x + 8 && mx < x + W - 8) {
+        boolean wide = mx >= x + 8 && mx < x + W - 8;
+        if (gradient && wide && in(my, rowsTop())) {
+            int picked = segment(mx, x + 8, W - 16, DIRECTIONS.length);
+            if (picked != direction || picked == LOOK) {
+                rangeFrom = null;
+                rangeTo = null;
+            }
+            direction = picked;
+            if (picked == LOOK) {
+                aimLook();
+            }
+            return true;
+        }
+        if (gradient && wide && in(my, rowsTop() + 18) && !radial()) {
+            int bw = (W - 16 - 6) / 3;
+            int which = mx < x + 8 + bw + 2 ? 0 : mx < x + 8 + (bw + 3) * 2 - 1 ? 1 : 2;
+            if (which == 2) {
+                rangeFrom = null;
+                rangeTo = null;
+            } else {
+                Double at = aimedAlong();
+                if (at != null) {
+                    if (which == 0) {
+                        rangeFrom = at;
+                    } else {
+                        rangeTo = at;
+                    }
+                }
+            }
+            return true;
+        }
+        if (in(my, paletteY()) && wide) {
             palette = segment(mx, x + 8, W - 16, PALETTES.length);
             return true;
         }
-        int by = py + 20;
-        List<String> blocks = gradient ? gradientBlocks() : nearest();
+        int by = blocksTop();
         int cw = (W - 16) / 6;
         for (int i = 0; i < blocks.size(); i++) {
             int cx = x + 8 + (i % 6) * cw;
@@ -457,7 +585,7 @@ final class ColorPicker {
         }
     }
 
-    private void segments(GuiGraphics g, Font font, int sx, int sy, int sw, String[] options, int selected, int mx, int my, String hint) {
+    private void segments(GuiGraphics g, Font font, int sx, int sy, int sw, String[] options, int selected, int mx, int my, String[] hints) {
         int n = options.length;
         for (int i = 0; i < n; i++) {
             int a = sx + (int) Math.round(i * sw / (double) n);
@@ -469,7 +597,7 @@ final class ColorPicker {
             }
             text(g, font, options[i], a + (b - a - font.width(options[i])) / 2, sy + 3, i == selected ? TEXT : DIM);
             if (over) {
-                hover = hint;
+                hover = hints[i];
             }
         }
     }

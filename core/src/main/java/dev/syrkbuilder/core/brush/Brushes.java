@@ -10,18 +10,25 @@ import java.util.Random;
 import java.util.Set;
 
 public final class Brushes {
-    public record Settings(BrushType type, int radius, Pattern pattern, double strength, double density, int depth,
+    public record Settings(BrushType type, int radius, int rx, int ry, int rz, Pattern pattern, double strength, double density, int depth,
                            int height, double scale, boolean replaceTop, Set<String> from, long seed, String variant) {
     }
 
     private Brushes() {
     }
 
+    // How far a cell is from the centre as a fraction of the brush's size on each axis: 1 is the edge.
+    static double reach(Settings s, int dx, int dy, int dz) {
+        double a = dx / (s.rx() + 0.5);
+        double b = dy / (s.ry() + 0.5);
+        double c = dz / (s.rz() + 0.5);
+        return Math.sqrt(a * a + b * b + c * c);
+    }
+
     public static EditBuffer apply(Settings s, WorldView world, int cx, int cy, int cz, long limit) {
         EditBuffer out = new EditBuffer(limit);
-        int r = s.radius();
         if (s.pattern() != null) {
-            s.pattern().bind(new dev.syrkbuilder.core.edit.Box(cx - r, cy - r, cz - r, cx + r, cy + r, cz + r));
+            s.pattern().bind(new dev.syrkbuilder.core.edit.Box(cx - s.rx(), cy - s.ry(), cz - s.rz(), cx + s.rx(), cy + s.ry(), cz + s.rz()));
         }
         switch (s.type()) {
             case SPHERE, ERASE, PAINT, REPLACE, FILL -> ball(s, world, cx, cy, cz, out);
@@ -34,19 +41,13 @@ public final class Brushes {
         return out;
     }
 
-    private static boolean inBall(int dx, int dy, int dz, int r) {
-        double a = r + 0.5;
-        return dx * dx + dy * dy + dz * dz <= a * a;
-    }
-
     private static void ball(Settings s, WorldView world, int cx, int cy, int cz, EditBuffer out) {
-        int r = s.radius();
-        int minY = Math.max(world.minY(), cy - r);
-        int maxY = Math.min(world.maxY() - 1, cy + r);
+        int minY = Math.max(world.minY(), cy - s.ry());
+        int maxY = Math.min(world.maxY() - 1, cy + s.ry());
         for (int y = minY; y <= maxY; y++) {
-            for (int z = cz - r; z <= cz + r; z++) {
-                for (int x = cx - r; x <= cx + r; x++) {
-                    if (!inBall(x - cx, y - cy, z - cz, r)) {
+            for (int z = cz - s.rz(); z <= cz + s.rz(); z++) {
+                for (int x = cx - s.rx(); x <= cx + s.rx(); x++) {
+                    if (reach(s, x - cx, y - cy, z - cz) > 1) {
                         continue;
                     }
                     String id = world.blockId(x, y, z);
@@ -85,15 +86,13 @@ public final class Brushes {
     }
 
     private static void surface(Settings s, WorldView world, int cx, int cy, int cz, EditBuffer out) {
-        int r = s.radius();
         Random random = new Random(s.seed());
-        for (int z = cz - r; z <= cz + r; z++) {
-            for (int x = cx - r; x <= cx + r; x++) {
-                double d = Math.sqrt((x - cx) * (x - cx) + (z - cz) * (z - cz));
-                if (d > r + 0.5) {
+        for (int z = cz - s.rz(); z <= cz + s.rz(); z++) {
+            for (int x = cx - s.rx(); x <= cx + s.rx(); x++) {
+                if (reach(s, x - cx, 0, z - cz) > 1) {
                     continue;
                 }
-                int top = Surface.top(world, x, z, Math.max(world.minY(), cy - r), Math.min(world.maxY() - 2, cy + r));
+                int top = Surface.top(world, x, z, Math.max(world.minY(), cy - s.ry()), Math.min(world.maxY() - 2, cy + s.ry()));
                 if (top == Integer.MIN_VALUE) {
                     continue;
                 }
@@ -121,30 +120,30 @@ public final class Brushes {
         }
     }
 
-    private static double falloff(double d, int r) {
-        if (d >= r + 0.5) {
+    private static double falloff(double reach) {
+        if (reach >= 1) {
             return 0;
         }
-        double t = 1 - (d / (r + 0.5)) * (d / (r + 0.5));
+        double t = 1 - reach * reach;
         return t * t;
     }
 
     private static void terrain(Settings s, WorldView world, int cx, int cy, int cz, EditBuffer out) {
-        int r = s.radius();
         int margin = 3;
-        int size = (r + margin) * 2 + 1;
-        int minX = cx - r - margin;
-        int minZ = cz - r - margin;
-        int scanBottom = Math.max(world.minY(), cy - r * 2);
-        int scanTop = Math.min(world.maxY() - 2, cy + r * 2);
-        Heightfield h = new Heightfield(minX, minZ, size, size);
-        boolean[] has = new boolean[size * size];
-        for (int j = 0; j < size; j++) {
-            for (int i = 0; i < size; i++) {
+        int sizeX = (s.rx() + margin) * 2 + 1;
+        int sizeZ = (s.rz() + margin) * 2 + 1;
+        int minX = cx - s.rx() - margin;
+        int minZ = cz - s.rz() - margin;
+        int scanBottom = Math.max(world.minY(), cy - s.ry() * 2);
+        int scanTop = Math.min(world.maxY() - 2, cy + s.ry() * 2);
+        Heightfield h = new Heightfield(minX, minZ, sizeX, sizeZ);
+        boolean[] has = new boolean[sizeX * sizeZ];
+        for (int j = 0; j < sizeZ; j++) {
+            for (int i = 0; i < sizeX; i++) {
                 int top = Surface.top(world, minX + i, minZ + j, scanBottom, scanTop);
                 if (top != Integer.MIN_VALUE) {
                     h.set(i, j, top);
-                    has[j * size + i] = true;
+                    has[j * sizeX + i] = true;
                 } else {
                     h.set(i, j, cy);
                 }
@@ -162,12 +161,13 @@ public final class Brushes {
             default -> {
             }
         }
-        for (int j = 0; j < size; j++) {
-            for (int i = 0; i < size; i++) {
+        for (int j = 0; j < sizeZ; j++) {
+            for (int i = 0; i < sizeX; i++) {
                 int x = minX + i;
                 int z = minZ + j;
-                double f = falloff(Math.sqrt((x - cx) * (x - cx) + (z - cz) * (z - cz)), r);
-                if (f <= 0 || !has[j * size + i]) {
+                double flat = reach(s, x - cx, 0, z - cz);
+                double f = falloff(flat);
+                if (f <= 0 || !has[j * sizeX + i]) {
                     continue;
                 }
                 double old = h.get(i, j);
@@ -176,7 +176,7 @@ public final class Brushes {
                     case LOWER -> old - s.strength() * f;
                     case FLATTEN -> old + (cy - old) * Math.min(1, s.strength()) * f;
                     case NOISE -> old + noise.fbm(x / scale, z / scale, 3, 2.0, 0.5) * s.strength() * f;
-                    case CRATER -> old + crater(Math.sqrt((x - cx) * (x - cx) + (z - cz) * (z - cz)) / (r + 0.5)) * s.strength();
+                    case CRATER -> old + crater(flat) * s.strength();
                     case TERRACE -> f > 0.15 ? cy + Math.floor((old - cy) / Math.max(1, s.strength()) + 0.5) * Math.max(1, s.strength()) : old;
                     case SMOOTH -> old + (target.get(i, j) - old) * f;
                     default -> old + (target.get(i, j) - old) * f;
@@ -193,20 +193,19 @@ public final class Brushes {
     }
 
     private static void spikes(Settings s, WorldView world, int cx, int cy, int cz, EditBuffer out) {
-        int r = s.radius();
         Random random = new Random(s.seed());
         int maxH = (int) Math.max(2, Math.round(s.strength()));
-        for (int z = cz - r; z <= cz + r; z++) {
-            for (int x = cx - r; x <= cx + r; x++) {
-                double d = Math.sqrt((x - cx) * (x - cx) + (z - cz) * (z - cz));
-                if (d > r + 0.5 || random.nextDouble() >= s.density()) {
+        for (int z = cz - s.rz(); z <= cz + s.rz(); z++) {
+            for (int x = cx - s.rx(); x <= cx + s.rx(); x++) {
+                double flat = reach(s, x - cx, 0, z - cz);
+                if (flat > 1 || random.nextDouble() >= s.density()) {
                     continue;
                 }
-                int top = Surface.top(world, x, z, Math.max(world.minY(), cy - r), Math.min(world.maxY() - 2, cy + r));
+                int top = Surface.top(world, x, z, Math.max(world.minY(), cy - s.ry()), Math.min(world.maxY() - 2, cy + s.ry()));
                 if (top == Integer.MIN_VALUE) {
                     continue;
                 }
-                int h = Math.max(2, (int) Math.round(maxH * (0.5 + 0.5 * random.nextDouble()) * (0.5 + 0.5 * falloff(d, r))));
+                int h = Math.max(2, (int) Math.round(maxH * (0.5 + 0.5 * random.nextDouble()) * (0.5 + 0.5 * falloff(flat))));
                 double base = Math.max(0.6, h / 5.0);
                 for (int k = 0; k < h && top + 1 + k < world.maxY(); k++) {
                     double rad = base * (1 - (double) k / h);
@@ -231,13 +230,12 @@ public final class Brushes {
     }
 
     private static void forest(Settings s, WorldView world, int cx, int cy, int cz, EditBuffer out) {
-        int r = s.radius();
         Random random = new Random(s.seed());
         java.util.List<dev.syrkbuilder.core.tree.Trees.Type> types = treeTypes(s.variant());
         java.util.List<int[]> planted = new java.util.ArrayList<>();
-        for (int z = cz - r; z <= cz + r; z++) {
-            for (int x = cx - r; x <= cx + r; x++) {
-                if ((x - cx) * (x - cx) + (z - cz) * (z - cz) > (r + 0.5) * (r + 0.5) || random.nextDouble() >= s.density()) {
+        for (int z = cz - s.rz(); z <= cz + s.rz(); z++) {
+            for (int x = cx - s.rx(); x <= cx + s.rx(); x++) {
+                if (reach(s, x - cx, 0, z - cz) > 1 || random.nextDouble() >= s.density()) {
                     continue;
                 }
                 boolean crowded = false;
@@ -247,7 +245,7 @@ public final class Brushes {
                         break;
                     }
                 }
-                int top = Surface.top(world, x, z, Math.max(world.minY(), cy - r), Math.min(world.maxY() - 2, cy + r));
+                int top = Surface.top(world, x, z, Math.max(world.minY(), cy - s.ry()), Math.min(world.maxY() - 2, cy + s.ry()));
                 if (crowded || top == Integer.MIN_VALUE) {
                     continue;
                 }

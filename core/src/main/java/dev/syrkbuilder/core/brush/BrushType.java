@@ -75,6 +75,10 @@ public enum BrushType {
         };
     }
 
+    public boolean flat() {
+        return terrain() || this == OVERLAY || this == SCATTER || this == SPIKES || this == TREES;
+    }
+
     public int maxRadius() {
         return voxel() ? 32 : 64;
     }

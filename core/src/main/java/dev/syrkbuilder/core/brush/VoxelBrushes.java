@@ -124,18 +124,23 @@ final class VoxelBrushes {
         return !Surface.soft(id) && !id.equals("minecraft:water") && !id.equals("minecraft:lava") && !id.equals("minecraft:bubble_column");
     }
 
-    private static double inBall(int dx, int dy, int dz, int r) {
-        double a = r + 0.5;
-        double d2 = dx * dx + dy * dy + dz * dz;
-        return d2 <= a * a ? 1 - Math.sqrt(d2) / a : -1;
+    private static double inBall(int dx, int dy, int dz, int rx, int ry, int rz) {
+        double a = dx / (rx + 0.5);
+        double b = dy / (ry + 0.5);
+        double c = dz / (rz + 0.5);
+        double d = Math.sqrt(a * a + b * b + c * c);
+        return d <= 1 ? 1 - d : -1;
     }
 
     static void apply(Brushes.Settings s, WorldView world, int cx, int cy, int cz, EditBuffer out) {
         int r = s.radius();
         boolean lumpy = s.type() == BrushType.BLOB || s.type() == BrushType.CARVE;
-        int reach = lumpy ? (int) Math.ceil(r * (1 + 0.6 * s.strength())) : r;
-        Grid g = new Grid(world, cx, cy, cz, reach + 2);
-        int half = reach + 2;
+        double grow = lumpy ? 1 + 0.6 * s.strength() : 1;
+        int gx = (int) Math.ceil(s.rx() * grow);
+        int gy = (int) Math.ceil(s.ry() * grow);
+        int gz = (int) Math.ceil(s.rz() * grow);
+        int half = Math.max(gx, Math.max(gy, gz)) + 2;
+        Grid g = new Grid(world, cx, cy, cz, half);
         boolean[] before = g.solid.clone();
         String[] beforeState = g.state.clone();
         Pattern pattern = s.pattern();
@@ -150,12 +155,12 @@ final class VoxelBrushes {
             case SCULPT -> {
                 int passes = 1 + (int) Math.round(s.strength() * 3);
                 for (int p = 0; p < passes; p++) {
-                    sculptPass(g, r, half, pattern);
+                    sculptPass(g, s, half, pattern);
                 }
             }
             case INFLATE, DEFLATE, DECAY -> {
                 boolean[] snap = g.solid.clone();
-                forBall(g, r, half, (x, y, z, f) -> {
+                forBall(g, s.rx(), s.ry(), s.rz(), half, (x, y, z, f) -> {
                     int i = g.index(x, y, z);
                     if (s.type() == BrushType.INFLATE) {
                         if (!snap[i] && g.touching(snap, x, y, z)) {
@@ -172,7 +177,7 @@ final class VoxelBrushes {
             }
             case ROUGHEN -> {
                 boolean[] snap = g.solid.clone();
-                forBall(g, r, half, (x, y, z, f) -> {
+                forBall(g, s.rx(), s.ry(), s.rz(), half, (x, y, z, f) -> {
                     int i = g.index(x, y, z);
                     boolean surfaceSolid = snap[i] && g.exposed(snap, x, y, z);
                     boolean surfaceAir = !snap[i] && g.touching(snap, x, y, z);
@@ -189,7 +194,7 @@ final class VoxelBrushes {
                     }
                 });
             }
-            case SPLATTER -> forBall(g, r, half, (x, y, z, f) -> {
+            case SPLATTER -> forBall(g, s.rx(), s.ry(), s.rz(), half, (x, y, z, f) -> {
                 int i = g.index(x, y, z);
                 if (before[i] && g.exposed(before, x, y, z)) {
                     double n = noise.fbm((g.ox + x) / scale, (g.oy + y) / scale, (g.oz + z) / scale, 3);
@@ -198,13 +203,10 @@ final class VoxelBrushes {
                     }
                 }
             });
-            case BLOB, CARVE -> forBall(g, reach, half, (x, y, z, f) -> {
-                int dx = x - half;
-                int dy = y - half;
-                int dz = z - half;
-                double d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            case BLOB, CARVE -> forBall(g, gx, gy, gz, half, (x, y, z, f) -> {
+                double d = Brushes.reach(s, x - half, y - half, z - half);
                 double n = noise.fbm((g.ox + x) / scale, (g.oy + y) / scale, (g.oz + z) / scale, 3);
-                double edge = (r + 0.5) * (1 + 0.6 * s.strength() * n);
+                double edge = 1 + 0.6 * s.strength() * n;
                 if (d > edge) {
                     return;
                 }
@@ -224,14 +226,14 @@ final class VoxelBrushes {
         void visit(int x, int y, int z, double f);
     }
 
-    private static void forBall(Grid g, int r, int half, CellVisitor v) {
-        for (int y = half - r; y <= half + r; y++) {
+    private static void forBall(Grid g, int rx, int ry, int rz, int half, CellVisitor v) {
+        for (int y = half - ry; y <= half + ry; y++) {
             if (!g.writable(y)) {
                 continue;
             }
-            for (int z = half - r; z <= half + r; z++) {
-                for (int x = half - r; x <= half + r; x++) {
-                    double f = inBall(x - half, y - half, z - half, r);
+            for (int z = half - rz; z <= half + rz; z++) {
+                for (int x = half - rx; x <= half + rx; x++) {
+                    double f = inBall(x - half, y - half, z - half, rx, ry, rz);
                     if (f >= 0) {
                         v.visit(x, y, z, f);
                     }
@@ -252,10 +254,10 @@ final class VoxelBrushes {
         g.state[i] = "minecraft:air";
     }
 
-    private static void sculptPass(Grid g, int r, int half, Pattern pattern) {
+    private static void sculptPass(Grid g, Brushes.Settings s, int half, Pattern pattern) {
         boolean[] snap = g.solid.clone();
         String[] states = g.state.clone();
-        forBall(g, r, half, (x, y, z, f) -> {
+        forBall(g, s.rx(), s.ry(), s.rz(), half, (x, y, z, f) -> {
             int count = 0;
             for (int dy = -1; dy <= 1; dy++) {
                 for (int dz = -1; dz <= 1; dz++) {
