@@ -129,7 +129,7 @@ final class BrushBindings {
         cooldown = DAB_TICKS - 1;
         BlockPos target = SyrkBuilderClient.lookedAt(player);
         if (target != null) {
-            SyrkBuilderClient.forward(QUIET, "brush " + brush + " stroke=" + stroke);
+            SyrkBuilderClient.forward(QUIET, "brush " + brush + " stroke=" + stroke + " -q");
         }
     }
 

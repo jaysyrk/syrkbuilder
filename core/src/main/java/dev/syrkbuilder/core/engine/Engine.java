@@ -134,12 +134,22 @@ public final class Engine<W, B> {
         return sessions.computeIfAbsent(player, k -> new Session(config.maxUploadBytes()));
     }
 
-    private void handle(UUID player, W world, Request request, Consumer<String> reply) {
+    private void handle(UUID player, W world, Request incoming, Consumer<String> loud) {
+        String command = incoming.command().stripTrailing();
+        boolean quiet = command.endsWith(" -q");
+        Request request = quiet
+            ? new Request(command.substring(0, command.length() - 3), incoming.target(), incoming.pos1(), incoming.pos2(),
+                incoming.feet(), incoming.yaw(), incoming.pitch())
+            : incoming;
+        Consumer<String> reply = !quiet ? loud : line -> {
+            if (line.startsWith("&c") || Protocol.dataLine(line) != null) {
+                loud.accept(line);
+            }
+        };
         HistoryTree<B> tree = history(player, world);
         if (tree == null) {
-            Request queued = request;
             waitingForHistory.computeIfAbsent(key(player, world), k -> new java.util.ArrayList<>())
-                .add(() -> handle(player, world, queued, reply));
+                .add(() -> handle(player, world, incoming, loud));
             return;
         }
         String key = key(player, world);
@@ -178,9 +188,6 @@ public final class Engine<W, B> {
                 String mode = args.lower(1);
                 boolean on = mode.isEmpty() ? !session(player).preview() : mode.equals("on") || mode.equals("true");
                 session(player).preview(on);
-                if (args.flag("q")) {
-                    return;
-                }
                 reply.accept(on ? "&aPreview on&7: the last thing you place can be moved (/sb nudge), turned (/sb turn) or cancelled (/sb cancel) until you do something else."
                     : "&7Preview off: edits are final straight away (undo still works).");
                 return;

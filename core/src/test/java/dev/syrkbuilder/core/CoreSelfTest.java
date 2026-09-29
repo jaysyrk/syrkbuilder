@@ -732,6 +732,13 @@ public final class CoreSelfTest {
         send.accept("goto 2", none);
         send.accept("restore start", sel.apply(new int[]{0, 70, 0}, new int[]{0, 70, 0}));
         check("engine restore region", at.get().equals("minecraft:air") && world.blockState(1, 70, 1).equals("minecraft:diamond_block"), at.get());
+        int quietFrom = msgs.size();
+        send.accept("sphere coal_block 2 -q", look.apply(new int[]{300, 70, 300}));
+        boolean chatty = msgs.subList(quietFrom, msgs.size()).stream().anyMatch(m -> Protocol.dataLine(m) == null);
+        check("quiet edit places without chat", world.blockState(300, 70, 300).equals("minecraft:coal_block") && !chatty, msgs.subList(quietFrom, msgs.size()));
+        quietFrom = msgs.size();
+        send.accept("set bogus_block -q", sel.apply(new int[]{5, 71, 5}, new int[]{5, 71, 5}));
+        check("quiet edit still reports errors", msgs.subList(quietFrom, msgs.size()).stream().anyMatch(m -> m.contains("Unknown block")), msgs.subList(quietFrom, msgs.size()));
         send.accept("script maze", sel.apply(new int[]{20, 64, 20}, new int[]{34, 64, 34}));
         check("engine runs bundled script", world.blocks.containsValue("minecraft:oak_leaves[persistent=true]"), msgs.subList(Math.max(0, msgs.size() - 3), msgs.size()));
         msgs.clear();

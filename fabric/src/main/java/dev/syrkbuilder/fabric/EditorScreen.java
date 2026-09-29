@@ -1031,7 +1031,7 @@ final class EditorScreen extends Screen {
         nextDab = System.nanoTime() + 200_000_000L;
         painting = dragCommand != null;
         if (tool == BRUSHES && dragCommand != null) {
-            SyrkBuilderClient.forward(BrushBindings.QUIET, dragCommand.get() + " stroke=" + stroke);
+            SyrkBuilderClient.forward(BrushBindings.QUIET, dragCommand.get() + " stroke=" + stroke + " -q");
         } else {
             primary.run();
         }
@@ -1056,7 +1056,7 @@ final class EditorScreen extends Screen {
         }
         lastDrag = aim;
         nextDab = now + 200_000_000L;
-        SyrkBuilderClient.forward(BrushBindings.QUIET, dragCommand.get() + (dragStroke ? " stroke=" + stroke : ""));
+        SyrkBuilderClient.forward(BrushBindings.QUIET, dragCommand.get() + (dragStroke ? " stroke=" + stroke : "") + " -q");
     }
 
     private static void run(String command) {
