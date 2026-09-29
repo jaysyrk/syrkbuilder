@@ -147,6 +147,24 @@ public class SyrkBuilderClientTest implements FabricClientGameTest {
             check("/sb move moves the selected blocks", waitServer(server, s -> s.overworld().getBlockState(block.above(2)).is(Blocks.GOLD_BLOCK)
                 && s.overworld().getBlockState(block).isAir()));
             check("/sb move takes the selection along", waitClient(context, () -> context.computeOnClient(c -> block.above(2).equals(Selection.pos1()))));
+
+            BlockPos wellAt = target.offset(-5, 0, 0);
+            context.getInput().lookAt(wellAt);
+            context.waitTicks(2);
+            chat(context, world, "/sb script well");
+            check("/sb script well builds the well", waitServer(server, s -> {
+                for (int dx = -3; dx <= 3; dx++) {
+                    for (int dz = -3; dz <= 3; dz++) {
+                        for (int dy = 3; dy <= 6; dy++) {
+                            if (s.overworld().getBlockState(wellAt.offset(dx, dy, dz)).is(Blocks.SPRUCE_SLAB)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }));
+            context.takeScreenshot("11_well");
         } catch (Throwable t) {
             failed = true;
             report.add("CRASH " + t);
