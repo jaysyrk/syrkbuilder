@@ -264,7 +264,7 @@ final class ColorPicker {
             }
             ItemStack stack = icon(b);
             if (!stack.isEmpty()) {
-                g.renderItem(stack, cx + (cw - 2 - 16) / 2, cy + 1);
+                g.item(stack, cx + (cw - 2 - 16) / 2, cy + 1);
             }
             if (over) {
                 hover = shortId(b) + (gradient ? "" : " - click to use");
