@@ -3,7 +3,9 @@
 ## Unreleased
 
 - Gradients can run any direction: `grad(down):`, east, west, north, south, `grad(in):` towards the centre, `grad(look):` the way you're facing, or any direction like `grad(1/0/1):`
-- Gradient ranges: `grad(up,60..90):stone,snow_block` pins the first and last block to the world, so a brush stroke blends as one gradient instead of restarting in every dab
+- Gradient brush strokes keep the gradient of their first dab, so overlapping dabs no longer lay new bands over each other
+- Gradient ranges: `grad(up,60..90):stone,snow_block` pins the first and last block to the world, however far a stroke goes
+- Painting a wall with a gradient no longer speckles the floor at its foot
 - Colour picker: the Gradient tab has all nine directions, plus Start at aim and End at aim to set a range by aiming at blocks
 - Colour picker: Use palette puts every block shown into the field as an even mix
 - Brushes can be stretched: `rx=`, `ry=` and `rz=` give them their own size on each axis (Stretch per axis in the editor)

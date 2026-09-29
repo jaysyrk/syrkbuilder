@@ -248,6 +248,11 @@ public final class Pattern {
         return this;
     }
 
+    // A straight gradient with no range stretches over whatever box it's bound to.
+    public boolean fitsBounds() {
+        return gradient && radial == 0 && !ranged;
+    }
+
     // A face that points along the gradient (a floor's top under an upward gradient) sits at a single point on it.
     public boolean along(int nx, int ny, int nz) {
         return gradient && radial == 0 && Math.abs(nx * dirX + ny * dirY + nz * dirZ) >= 0.7;

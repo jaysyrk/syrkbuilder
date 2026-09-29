@@ -610,7 +610,7 @@ final class EditorScreen extends Screen {
         if (type.needsBlocks) {
             boolean optional = type.blocks == BrushType.Blocks.OPTIONAL;
             p.blocksField("Blocks", brushBlocks, optional ? "touching block" : "stone", v -> brushBlocks = v);
-            p.note("§8For a gradient that blends across a whole stroke, set Start and End at aim in the colour picker.");
+            p.note("§8A gradient keeps the spread of your first dab for the whole stroke. To spread it wider, set Start and End at aim in the colour picker.");
         }
         if (type.usesStrength()) {
             p.field("Strength", brushStrength, type.strengthInBlocks() ? (int) type.defaultStrength + " (blocks)" : String.valueOf(type.defaultStrength),

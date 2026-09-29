@@ -1534,6 +1534,25 @@ public final class CoreSelfTest {
         }
         check("a gradient range spans separate brush dabs", "minecraft:white_wool".equals(dabs.blocks.get(FlatWorld.key(0, 100, 0)))
             && "minecraft:black_wool".equals(dabs.blocks.get(FlatWorld.key(0, 110, 0))), "");
+        Session strokes = session();
+        String gradBrush = "brush sphere 3 grad:white_wool,gray_wool,black_wool";
+        FlatWorld single = new FlatWorld(0);
+        single.run(cmds.run(new Request(gradBrush + " stroke=9", new int[]{0, 100, 0}, null, null, null, 0, 0), single, strokes, services()).stream());
+        FlatWorld dragged = new FlatWorld(0);
+        for (int y : new int[]{100, 102}) {
+            dragged.run(cmds.run(new Request(gradBrush + " stroke=11", new int[]{0, y, 0}, null, null, null, 0, 0), dragged, strokes, services()).stream());
+        }
+        int relayered = 0;
+        for (Map.Entry<Long, String> e : single.blocks.entrySet()) {
+            if (!e.getValue().equals(dragged.blocks.get(e.getKey()))) {
+                relayered++;
+            }
+        }
+        check("dabs in one stroke share a gradient, so overlaps don't lay new bands", relayered == 0, relayered + " blocks changed");
+        FlatWorld fresh = new FlatWorld(0);
+        fresh.run(cmds.run(new Request(gradBrush + " stroke=12", new int[]{0, 110, 0}, null, null, null, 0, 0), fresh, strokes, services()).stream());
+        check("a new stroke starts its own gradient", "minecraft:gray_wool".equals(fresh.blocks.get(FlatWorld.key(0, 110, 0))), fresh.blocks.get(FlatWorld.key(0, 110, 0)));
+
         FlatWorld flipped = new FlatWorld(0);
         flipped.run(cmds.run(new Request("set grad(y,60..50):white_wool,black_wool", null, new int[]{0, 50, 0}, new int[]{0, 60, 0}, null, 0, 0), flipped, session(), services()).stream());
         check("the range's order sets the direction", "minecraft:white_wool".equals(flipped.blocks.get(FlatWorld.key(0, 60, 0)))

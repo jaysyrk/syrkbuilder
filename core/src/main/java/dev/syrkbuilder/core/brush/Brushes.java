@@ -11,7 +11,8 @@ import java.util.Set;
 
 public final class Brushes {
     public record Settings(BrushType type, int radius, int rx, int ry, int rz, Pattern pattern, double strength, double density, int depth,
-                           int height, double scale, boolean replaceTop, Set<String> from, long seed, String variant) {
+                           int height, double scale, boolean replaceTop, Set<String> from, long seed, String variant,
+                           dev.syrkbuilder.core.edit.Box frame) {
     }
 
     private Brushes() {
@@ -28,7 +29,8 @@ public final class Brushes {
     public static EditBuffer apply(Settings s, WorldView world, int cx, int cy, int cz, long limit) {
         EditBuffer out = new EditBuffer(limit);
         if (s.pattern() != null) {
-            s.pattern().bind(new dev.syrkbuilder.core.edit.Box(cx - s.rx(), cy - s.ry(), cz - s.rz(), cx + s.rx(), cy + s.ry(), cz + s.rz()));
+            s.pattern().bind(s.frame() != null ? s.frame()
+                : new dev.syrkbuilder.core.edit.Box(cx - s.rx(), cy - s.ry(), cz - s.rz(), cx + s.rx(), cy + s.ry(), cz + s.rz()));
         }
         switch (s.type()) {
             case SPHERE, ERASE, PAINT, REPLACE, FILL -> ball(s, world, cx, cy, cz, out);
