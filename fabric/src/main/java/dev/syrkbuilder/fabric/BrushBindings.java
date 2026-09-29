@@ -118,6 +118,7 @@ final class BrushBindings {
         if (brush == null || !mc.options.keyUse.isDown()) {
             stroke = 0;
             cooldown = 0;
+            lastStamp = null;
             return;
         }
         if (stroke == 0) {
@@ -128,8 +129,26 @@ final class BrushBindings {
         }
         cooldown = DAB_TICKS - 1;
         BlockPos target = SyrkBuilderClient.lookedAt(player);
-        if (target != null) {
-            SyrkBuilderClient.forward(QUIET, "brush " + brush + " stroke=" + stroke + " -q");
+        if (target == null) {
+            return;
+        }
+        if (brush.startsWith("stamp")) {
+            if (lastStamp != null && Math.sqrt(target.distSqr(lastStamp)) < stampSpacing(brush)) {
+                return;
+            }
+            lastStamp = target;
+        }
+        SyrkBuilderClient.forward(QUIET, "brush " + brush + " stroke=" + stroke + " -q");
+    }
+
+    private static BlockPos lastStamp;
+
+    private static double stampSpacing(String brush) {
+        String[] parts = brush.split(" ");
+        try {
+            return parts.length > 1 ? Math.max(1, Double.parseDouble(parts[1])) : 4;
+        } catch (NumberFormatException e) {
+            return 4;
         }
     }
 

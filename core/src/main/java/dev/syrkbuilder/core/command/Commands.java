@@ -111,7 +111,7 @@ public final class Commands {
                 case "tree" -> tree(req, a, world);
                 case "fill" -> fill(req, a, world);
                 case "path" -> path(req, a, world, session);
-                case "brush", "b" -> brush(req, a, world);
+                case "brush", "b" -> a.lower(1).equals("stamp") ? stamp(req, a, session) : brush(req, a, world);
                 case "gradient", "grad" -> gradient(a);
                 case "mask" -> mask(a, session);
                 case "symmetry", "sym", "mirror" -> symmetry(req, a, session);
@@ -946,6 +946,19 @@ public final class Commands {
         dev.syrkbuilder.core.edit.EditBuffer edits = dev.syrkbuilder.core.brush.Brushes.apply(settings, world, t[0], t[1], t[2], maxVolume);
         int stroke = a.intValue("stroke", 0, Integer.MIN_VALUE, Integer.MAX_VALUE);
         return new Result(Result.Kind.EDIT, "brush " + type.id(), edits, stroke, List.of(), null, List.of(), null);
+    }
+
+    private Result stamp(Request req, Args a, Session session) {
+        BlockGrid clip = session.clipboard();
+        if (clip == null) {
+            return Result.error("The stamp brush paints your clipboard - /sb copy something first (or /sb template load <name>).");
+        }
+        int turns = a.flag("r") ? 0 : java.util.concurrent.ThreadLocalRandom.current().nextInt(4);
+        BlockGrid grid = turns == 0 ? clip : clip.transformed(turns, false);
+        int[] t = anchor(req);
+        int stroke = a.intValue("stroke", 0, Integer.MIN_VALUE, Integer.MAX_VALUE);
+        PasteStream paste = new PasteStream(grid, t[0] - grid.sizeX() / 2, t[1] + 1, t[2] - grid.sizeZ() / 2, true, Map.of());
+        return new Result(Result.Kind.EDIT, "brush stamp", paste, stroke, List.of(), null, List.of(), null);
     }
 
     private Result terrain(Request req, Args a, WorldView world) {

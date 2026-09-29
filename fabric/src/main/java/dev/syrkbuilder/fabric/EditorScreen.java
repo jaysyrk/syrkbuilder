@@ -582,7 +582,10 @@ final class EditorScreen extends Screen {
         BrushType type = types[brushType];
         p.section(type.id());
         p.note(type.description);
-        p.field("Radius", brushRadius, "1-" + type.maxRadius(), v -> brushRadius = v);
+        p.field(type == BrushType.STAMP ? "Spacing" : "Radius", brushRadius, "1-" + type.maxRadius(), v -> brushRadius = v);
+        if (type == BrushType.STAMP) {
+            p.note("§8Copy something first (Clipboard tab). Drag to stamp it along the way.");
+        }
         if (type.needsBlocks) {
             boolean optional = type.blocks == BrushType.Blocks.OPTIONAL;
             p.blocksField("Blocks", brushBlocks, optional ? "touching block" : "stone", v -> brushBlocks = v);
@@ -1123,7 +1126,7 @@ final class EditorScreen extends Screen {
         }
         long now = System.nanoTime();
         double moved = lastDrag == null ? Double.MAX_VALUE : Math.sqrt(aim.distSqr(lastDrag));
-        boolean due = moved >= dragSpacing.getAsDouble() || tool == BRUSHES && now >= nextDab;
+        boolean due = moved >= dragSpacing.getAsDouble() || tool == BRUSHES && BrushType.values()[brushType] != BrushType.STAMP && now >= nextDab;
         if (!due) {
             return;
         }

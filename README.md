@@ -28,7 +28,7 @@ current tool. Middle-click copies the block you aim at into the tool's Blocks fi
 |---|---|
 | Shapes | sphere, ellipsoid, dome, cylinder, cone, pyramid, circle, disc, torus, helix, text, arch |
 | Terrain | 8 generators with radius, height, erosion, roughness, peaks, style and seed |
-| Brushes | 25 brushes in three groups: blocks, sculpting and terrain |
+| Brushes | 26 brushes in three groups: blocks (including a clipboard stamp), sculpting and terrain |
 | Fill | hole (fills to the brim), connected (paint bucket), room (enclosed 3D) |
 | Trees | oak, birch, spruce, pine, jungle, dark oak, acacia, cherry, willow, palm, dead, swamp, and a forest brush |
 | Paths | drag or click points, then build a road, wall, tunnel, river, bridge or line |
