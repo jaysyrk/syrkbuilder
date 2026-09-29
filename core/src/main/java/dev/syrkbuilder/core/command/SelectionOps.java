@@ -167,6 +167,7 @@ final class SelectionOps {
     }
 
     static CellStream overlay(Box box, WorldView world, Pattern pattern, int depth) {
+        pattern.bind(new Box(box.minX(), box.minY(), box.minZ(), box.maxX(), box.maxY() + depth, box.maxZ()));
         CellStream out = new CellStream(box);
         int top = Math.min(box.maxY() + 1, world.maxY() - 1);
         for (int z = box.minZ(); z <= box.maxZ(); z++) {

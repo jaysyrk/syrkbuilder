@@ -89,6 +89,9 @@ final class EditorScreen extends Screen {
     private static String modelSize = "48";
     private static String heightmapHeight = "";
     private static String touchRadius = "12";
+    private static String textWords = "";
+    private static String textSize = "1";
+    private static boolean textFlat;
     private static int palette;
     private static boolean solid;
     private static int modelRotation;
@@ -494,6 +497,20 @@ final class EditorScreen extends Screen {
             return cmd + (hollow ? " -h" : "") + (airOnly ? " -a" : "") + (upright && (s.equals("circle") || s.equals("disc")) ? " -v" : "");
         }, () -> Math.max(1, number(radius, 6) * 0.5), true);
         p.note("§8Tip: blocks can be a gradient, e.g. grad:stone,andesite,diorite");
+        p.section("Text");
+        p.field("Words", textWords, "Hello", v -> textWords = v);
+        p.field("Scale", textSize, "1-16", v -> textSize = v);
+        p.toggle("Lying flat", () -> textFlat, v -> textFlat = v, "On the ground instead of standing up");
+        p.button("Write at target", false, () -> {
+            String words = textWords.trim().replaceAll("[=]", "");
+            if (!words.isEmpty()) {
+                run("text " + blocks(shapeBlocks) + " " + words + (textSize.isBlank() ? "" : " size=" + num(textSize)) + (textFlat ? " -f" : ""));
+            }
+        });
+        p.section("Arch");
+        p.buttons("Arch", () -> run("arch " + blocks(shapeBlocks) + " " + Math.max(3, (int) number(radius, 6) * 2)
+            + " " + Math.max(2, (int) number(shapeHeight, 8))), "Replace near", () -> run("replacenear " + num(radius) + " " + blocks(selFrom) + " " + blocks(shapeBlocks)));
+        p.note("§8Arch: width = 2x radius, height = the Height field. Replace near swaps the Selection tab's From blocks for these.");
     }
 
     private void terrain(Panel p) {

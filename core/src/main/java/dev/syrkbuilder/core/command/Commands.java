@@ -49,6 +49,7 @@ public final class Commands {
         "&ePaths&7: path add (repeat), then path <road|wall|tunnel|river|bridge|line> [width] [blocks]; path undo|clear",
         "&ePreview&7: the last placement stays live - nudge <dx dy dz|up|left|forward..> [n], turn [deg], cancel, confirm; preview on|off",
         "&eSelection edits&7: move [n] [dir], stack [n] [dir], hollow [thickness], overlay <blocks> [depth], naturalize",
+        "&eBuild&7: text <blocks> <words...> [size=] [depth=] [-f flat], arch <blocks> <width> <height> [thickness=] [depth=], replacenear <radius> <from> <to>",
         "&eMore&7: cut, smooth [passes] (selection), drain|snow|thaw|green [radius] (around where you look)",
         "&eSelection tools&7: select [-a] [-d] (magic select what you look at), expand|contract|shift <n> [dir|vert], size, count <blocks>, distr",
         "&eClipboard&7: copy, paste [rotate=90] [flip] [-a] [swap=stone:andesite], rotate <deg>, flip",
@@ -135,6 +136,9 @@ public final class Commands {
                 case "contract" -> resize(req, a, -1, "contract", world);
                 case "shift" -> shiftSelection(req, a);
                 case "size" -> size(req);
+                case "text" -> text(req, a);
+                case "arch" -> arch(req, a);
+                case "replacenear", "rnear" -> replaceNear(req, a, world);
                 case "cut" -> cut(req, world, session);
                 case "smooth" -> smoothSelection(req, a, world);
                 case "drain" -> around(req, a, "drain", 10, (c, r) -> NatureOps.drain(c, r, world));
@@ -629,6 +633,44 @@ public final class Commands {
     private Result smoothSelection(Request req, Args a, WorldView world) {
         Box box = checkedSelection(req);
         return Result.edit("smooth", NatureOps.smooth(box, world, a.intArg(1, "passes", 3, 1, 20)));
+    }
+
+    private Result text(Request req, Args a) {
+        if (a.size() < 3) {
+            return Result.error("Usage: /sb text <blocks> <words...> [size=1] [depth=1] [-f]  e.g. /sb text gold_block Hello");
+        }
+        Pattern pattern = pattern(a, 1);
+        List<String> words = new ArrayList<>();
+        for (int i = 2; i < a.size(); i++) {
+            words.add(a.word(i));
+        }
+        String text = String.join(" ", words);
+        if (text.length() > 64) {
+            return Result.error("Keep it to 64 characters.");
+        }
+        int size = a.intValue("size", 1, 1, 16);
+        int depth = a.intValue("depth", 1, 1, 16);
+        return Result.edit("text", BuildOps.text(anchor(req), req.yaw(), text, pattern, size, depth, a.flag("f")));
+    }
+
+    private Result arch(Request req, Args a) {
+        Pattern pattern = pattern(a, 1);
+        int width = a.intArg(2, "width", 12, 3, 256);
+        int height = a.intArg(3, "height", Math.max(3, width / 2), 2, 256);
+        return Result.edit("arch", BuildOps.arch(anchor(req), req.yaw(), pattern, width, height,
+            a.intValue("thickness", 2, 1, 64), a.intValue("depth", 3, 1, 64)));
+    }
+
+    private Result replaceNear(Request req, Args a, WorldView world) {
+        if (a.size() < 4) {
+            return Result.error("Usage: /sb replacenear <radius> <from> <to>");
+        }
+        int radius = a.intArg(1, "radius", 8, 1, 64);
+        dev.syrkbuilder.core.edit.CellStream stream = BuildOps.replaceNear(anchor(req), radius, ids(a, 2), pattern(a, 3), world);
+        if (stream.size() == 0) {
+            return Result.message("&7No matching blocks within " + radius + " blocks.");
+        }
+        return Result.edit("replacenear", stream);
     }
 
     private Result size(Request req) {

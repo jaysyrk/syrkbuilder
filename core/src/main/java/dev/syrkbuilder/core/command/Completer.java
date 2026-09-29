@@ -79,6 +79,9 @@ public final class Completer {
         Map.entry("shift", new Spec(List.of(Kind.NUMBER, Kind.NUDGE), List.of("1", "5", "10"), List.of(), List.of())),
         Map.entry("size", spec(List.of())),
         Map.entry("cut", spec(List.of())),
+        Map.entry("text", new Spec(List.of(Kind.BLOCKS, Kind.FREE), List.of(), List.of("size=", "depth="), List.of("-f"))),
+        Map.entry("arch", new Spec(List.of(Kind.BLOCKS, Kind.NUMBER, Kind.NUMBER), List.of("12", "20", "8"), List.of("thickness=", "depth="), List.of())),
+        Map.entry("replacenear", new Spec(List.of(Kind.NUMBER, Kind.BLOCKS, Kind.BLOCKS), List.of("5", "10", "20"), List.of(), List.of())),
         Map.entry("smooth", new Spec(List.of(Kind.NUMBER), List.of("1", "3", "6"), List.of(), List.of())),
         Map.entry("drain", new Spec(List.of(Kind.NUMBER), List.of("5", "10", "20"), List.of(), List.of())),
         Map.entry("snow", new Spec(List.of(Kind.NUMBER), List.of("8", "12", "24"), List.of(), List.of())),
@@ -90,7 +93,7 @@ public final class Completer {
         "dome", "cyl", "circle", "disc", "cone", "pyramid", "torus", "helix", "terrain", "copy", "paste", "rotate", "flip",
         "template", "marker", "undo", "redo", "history", "goto", "checkpoint", "restore", "mask", "symmetry", "gradient",
         "tree", "path", "fill", "nudge", "turn", "cancel", "confirm", "preview", "move", "stack", "hollow", "overlay",
-        "naturalize", "count", "distr", "select", "expand", "contract", "shift", "size", "cut", "smooth", "drain", "snow", "thaw", "green");
+        "naturalize", "count", "distr", "select", "expand", "contract", "shift", "size", "cut", "smooth", "drain", "snow", "thaw", "green", "text", "arch", "replacenear");
 
     private static Spec spec(List<Kind> args) {
         return new Spec(args, List.of(), List.of(), List.of());

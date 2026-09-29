@@ -824,6 +824,15 @@ public final class CoreSelfTest {
         world.blocks.put(FlatWorld.key(640, 64, 640), "minecraft:dirt");
         send.accept("green 2", look.apply(new int[]{640, 64, 640}));
         check("green turns dirt to grass", world.blockId(640, 64, 640).equals("minecraft:grass_block"), world.blockId(640, 64, 640));
+        send.accept("text gold_block Hi", look.apply(new int[]{700, 64, 700}));
+        check("text draws letters", world.blockState(704, 65, 700).equals("minecraft:gold_block") && world.blockState(704, 71, 700).equals("minecraft:gold_block")
+            && world.blockId(703, 65, 700).endsWith("air"), world.blockId(704, 65, 700));
+        send.accept("arch stone_bricks 10 5", look.apply(new int[]{720, 64, 720}));
+        check("arch has a top and two feet", world.blockState(720, 69, 720).equals("minecraft:stone_bricks") && world.blockState(715, 65, 720).equals("minecraft:stone_bricks")
+            && world.blockState(725, 65, 721).equals("minecraft:stone_bricks") && world.blockId(720, 65, 720).endsWith("air"), world.blockId(720, 69, 720));
+        send.accept("replacenear 2 stone andesite", look.apply(new int[]{740, 64, 740}));
+        check("replacenear swaps blocks in range", world.blockId(740, 64, 740).equals("minecraft:andesite") && world.blockId(742, 64, 740).equals("minecraft:andesite")
+            && world.blockId(743, 64, 740).equals("minecraft:stone"), world.blockId(740, 64, 740));
         send.accept("script maze", sel.apply(new int[]{20, 64, 20}, new int[]{34, 64, 34}));
         check("engine runs bundled script", world.blocks.containsValue("minecraft:oak_leaves[persistent=true]"), msgs.subList(Math.max(0, msgs.size() - 3), msgs.size()));
         msgs.clear();
