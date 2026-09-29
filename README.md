@@ -6,9 +6,6 @@ editor, with a live preview and an undo history you never lose.
 
 Works in singleplayer on its own. On a server, install the SyrkBuilder plugin (coming soon) on the server as well.
 
-![SyrkBuilder terrain generation](2026-09-29_12.57.14.png)
-![SyrkBuilder branching history timeline](2026-09-28_23.18.10_edited.png)
-
 ## Versions
 
 | Minecraft | Branch | Java |
@@ -31,6 +28,9 @@ Downloads are on Modrinth and on the Releases page.
 - **Select smarter.** Magic select grabs a whole build by clicking it. Move it, stack it, hollow it, smooth it.
 - **Works with your other tools.** Opens and saves WorldEdit, FAWE and Axiom `.schem` files and Litematica
   `.litematic` files, and picks up your WorldEdit and Litematica schematic folders automatically.
+  
+![SyrkBuilder branching history timeline](2026-09-28_23.18.10_edited.png)
+![SyrkBuilder terrain generation](2026-09-29_12.57.14.png)
 
 ## The editor (F7)
 
