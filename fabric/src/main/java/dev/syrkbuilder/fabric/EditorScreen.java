@@ -87,6 +87,7 @@ final class EditorScreen extends Screen {
     private static String templateName = "";
     private static int modelIndex;
     private static String modelSize = "48";
+    private static String heightmapHeight = "";
     private static int palette;
     private static boolean solid;
     private static int modelRotation;
@@ -693,22 +694,35 @@ final class EditorScreen extends Screen {
     }
 
     private void importPanel(Panel p) {
-        List<String> models = LocalFiles.list(LocalFiles.models(), SyrkBuilderClient.MODEL_TYPES);
+        List<String> models = SyrkBuilderClient.importables();
         if (models.isEmpty()) {
-            p.note("No models yet. Put .obj (with its .mtl and textures), .glb or .vox files in .minecraft/syrkbuilder/models");
+            p.note("No models yet. Put .obj (with its .mtl and textures), .glb or .vox files in .minecraft/syrkbuilder/models,");
+            p.note("or greyscale .png/.jpg heightmaps in .minecraft/syrkbuilder/heightmaps");
             return;
         }
         modelIndex = Math.min(modelIndex, models.size() - 1);
-        p.list(models, modelIndex, v -> modelIndex = v);
-        p.section("Options");
-        p.field("Size", modelSize, "2-512", v -> modelSize = v);
-        String[] palettes = BlockPalette.NAMES.toArray(new String[0]);
-        p.chips(palettes, null, palette, 3, v -> palette = v);
+        p.list(models, modelIndex, v -> {
+            modelIndex = v;
+            rebuildWidgets();
+        });
+        String chosen = models.get(modelIndex);
+        boolean image = SyrkBuilderClient.isImage(chosen);
+        p.section(image ? "Heightmap" : "Options");
+        p.field("Size", modelSize, image ? "width, e.g. 128" : "2-512", v -> modelSize = v);
+        if (image) {
+            p.field("Height", heightmapHeight, "auto", v -> heightmapHeight = v);
+            p.note("§8Brighter = higher. Grass on top, dirt, stone below, snow on the peaks.");
+        } else {
+            String[] palettes = BlockPalette.NAMES.toArray(new String[0]);
+            p.chips(palettes, null, palette, 3, v -> palette = v);
+            p.toggle("Solid", () -> solid, v -> solid = v, "Fill the inside, not just the shell");
+        }
         p.segments("Rotate", ROTATIONS, modelRotation, v -> modelRotation = v);
-        p.toggle("Solid", () -> solid, v -> solid = v, "Fill the inside, not just the shell");
         p.gap(4);
-        place(p, "Import at target", "import " + models.get(modelIndex), () -> SyrkBuilderClient.importModel(Feedback.chat(),
-            models.get(modelIndex) + " size=" + num(modelSize) + " palette=" + palettes[palette] + (solid ? " -s" : "")
+        String[] palettes = BlockPalette.NAMES.toArray(new String[0]);
+        place(p, "Import at target", "import " + chosen, () -> SyrkBuilderClient.importModel(Feedback.chat(),
+            chosen + (modelSize.isBlank() ? "" : " size=" + num(modelSize))
+                + (image ? (heightmapHeight.isBlank() ? "" : " height=" + num(heightmapHeight)) : " palette=" + palettes[palette] + (solid ? " -s" : ""))
                 + (modelRotation > 0 ? " rotate=" + modelRotation * 90 : "")));
     }
 

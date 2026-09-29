@@ -47,6 +47,7 @@ public final class SyrkBuilderClient implements ClientModInitializer {
     private static final double REACH = 256.0;
 
     static final String[] MODEL_TYPES = {".obj", ".glb", ".gltf", ".vox"};
+    static final String[] IMAGE_TYPES = {".png", ".jpg", ".jpeg"};
     static final String[] SCRIPT_TYPES = {".js"};
 
 
@@ -59,6 +60,7 @@ public final class SyrkBuilderClient implements ClientModInitializer {
     public void onInitializeClient() {
         Settings.load();
         LocalFiles.models();
+        LocalFiles.heightmaps();
         LocalFiles.scripts();
         LocalBackend.init();
         PayloadTypeRegistry.playC2S().register(SyrkPayload.TYPE, SyrkPayload.CODEC);
@@ -103,7 +105,10 @@ public final class SyrkBuilderClient implements ClientModInitializer {
                     return 1;
                 }))
                 .then(ClientCommandManager.literal("import")
-                    .executes(ctx -> listFiles(Feedback.of(ctx), "Models", LocalFiles.models(), MODEL_TYPES))
+                    .executes(ctx -> {
+                        listFiles(Feedback.of(ctx), "Models", LocalFiles.models(), MODEL_TYPES);
+                        return listFiles(Feedback.of(ctx), "Heightmaps", LocalFiles.heightmaps(), IMAGE_TYPES);
+                    })
                     .then(ClientCommandManager.argument("args", StringArgumentType.greedyString())
                         .suggests(suggestions("import"))
                         .executes(ctx -> importModel(Feedback.of(ctx), StringArgumentType.getString(ctx, "args")))))
@@ -259,7 +264,23 @@ public final class SyrkBuilderClient implements ClientModInitializer {
             }
             return names;
         },
-        () -> LocalFiles.list(LocalFiles.models(), MODEL_TYPES));
+        SyrkBuilderClient::importables);
+
+    static boolean isImage(String name) {
+        String lower = name.toLowerCase(java.util.Locale.ROOT);
+        for (String ext : IMAGE_TYPES) {
+            if (lower.endsWith(ext)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static List<String> importables() {
+        List<String> all = new java.util.ArrayList<>(LocalFiles.list(LocalFiles.models(), MODEL_TYPES));
+        all.addAll(LocalFiles.list(LocalFiles.heightmaps(), IMAGE_TYPES));
+        return all;
+    }
 
     private static List<String> blockIds() {
         if (blockIds == null) {
@@ -295,9 +316,10 @@ public final class SyrkBuilderClient implements ClientModInitializer {
     static int importModel(Feedback fb, String line) {
         Args args = Args.parse(line);
         String name = args.word(0);
-        Path file = name == null ? null : LocalFiles.resolve(LocalFiles.models(), name);
+        Path folder = name != null && isImage(name) ? LocalFiles.heightmaps() : LocalFiles.models();
+        Path file = name == null ? null : LocalFiles.resolve(folder, name);
         if (file == null || !Files.isRegularFile(file)) {
-            fb.error("No model '" + name + "' in " + LocalFiles.models());
+            fb.error("No " + (folder.equals(LocalFiles.heightmaps()) ? "heightmap" : "model") + " '" + name + "' in " + folder);
             return 0;
         }
         if (!available()) {
@@ -306,7 +328,8 @@ public final class SyrkBuilderClient implements ClientModInitializer {
         }
         ModelImporter.Options options;
         try {
-            options = new ModelImporter.Options(args.intValue("size", 48, 2, 512), args.flag("s") || args.flag("solid"), args.string("palette", "all"));
+            options = new ModelImporter.Options(args.intValue("size", isImage(name) ? 128 : 48, 2, 512), args.flag("s") || args.flag("solid"),
+                args.string("palette", "all"), args.intValue("height", 0, 0, 384));
         } catch (IllegalArgumentException e) {
             fb.error(e.getMessage());
             return 0;

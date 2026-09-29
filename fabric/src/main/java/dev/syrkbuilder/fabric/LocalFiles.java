@@ -26,6 +26,10 @@ final class LocalFiles {
         return dir("models");
     }
 
+    static Path heightmaps() {
+        return dir("heightmaps");
+    }
+
     static Path scripts() {
         return dir("scripts");
     }

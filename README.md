@@ -34,7 +34,7 @@ current tool. Middle-click copies the block you aim at into the tool's Blocks fi
 | Paths | drag or click points, then build a road, wall, tunnel, river, bridge or line |
 | Selection | set, walls, outline, replace, line, move, stack, hollow, overlay, naturalize, count, magic select, expand / contract / shift |
 | Clipboard | copy, paste, rotate, mirror, templates, export to `.schem` / `.litematic` |
-| Import | OBJ (with MTL textures), glTF / GLB, MagicaVoxel `.vox` |
+| Import | OBJ (with MTL textures), glTF / GLB, MagicaVoxel `.vox`, and `.png` / `.jpg` heightmaps as terrain |
 | Scripts | run JavaScript build scripts |
 | History | the branching timeline; click to jump, shift+click to restore your selection |
 
@@ -79,6 +79,7 @@ The golden axe is a selection wand: left-click sets pos1, right-click sets pos2.
 In singleplayer, everything lives in `.minecraft/syrkbuilder/`:
 
 - `models/` for models to import
+- `heightmaps/` for greyscale images to import as terrain
 - `scripts/` for build scripts (four examples are added on first run)
 - `templates/` for saved and exported builds; `.minecraft/schematics` and
   `.minecraft/config/worldedit/schematics` are read too

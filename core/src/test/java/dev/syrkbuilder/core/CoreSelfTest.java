@@ -81,6 +81,15 @@ public final class CoreSelfTest {
         }
     }
 
+    static int topOf(BlockGrid g, int x, int z) {
+        for (int y = g.sizeY() - 1; y >= 0; y--) {
+            if (g.get(x, y, z) != null) {
+                return y;
+            }
+        }
+        return -1;
+    }
+
     static final class FlatWorld implements WorldView {
         final Map<Long, String> blocks = new HashMap<>();
         final int groundY;
@@ -581,6 +590,18 @@ public final class CoreSelfTest {
         }
         vox.write(b.array(), 0, b.position());
         Files.write(dir.resolve("m.vox"), vox.toByteArray());
+        java.awt.image.BufferedImage hm = new java.awt.image.BufferedImage(40, 20, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        for (int ix = 0; ix < 40; ix++) {
+            for (int iz = 0; iz < 20; iz++) {
+                int v = ix * 255 / 39;
+                hm.setRGB(ix, iz, v << 16 | v << 8 | v);
+            }
+        }
+        javax.imageio.ImageIO.write(hm, "png", dir.resolve("ramp.png").toFile());
+        BlockGrid hg = ModelImporter.importFile(dir.resolve("ramp.png"), new ModelImporter.Options(20, false, "all", 16));
+        check("heightmap keeps the aspect ratio", hg.sizeX() == 20 && hg.sizeZ() == 10 && hg.sizeY() == 17, hg.sizeX() + "x" + hg.sizeY() + "x" + hg.sizeZ());
+        check("heightmap: dark is low, bright is high", hg.get(0, 1, 5) == null && hg.get(19, 16, 5) != null && hg.get(0, 0, 5) != null, hg.get(19, 16, 5));
+        check("heightmap has grass on gentle slopes", "minecraft:grass_block".equals(hg.get(5, topOf(hg, 5, 5), 5)), hg.get(5, topOf(hg, 5, 5), 5));
         BlockGrid vg = ModelImporter.importFile(dir.resolve("m.vox"), new ModelImporter.Options(64, false, "concrete"));
         check("vox axes (z-up -> y-up)", vg.sizeX() == 2 && vg.sizeY() == 4 && vg.sizeZ() == 3, vg.sizeX() + "x" + vg.sizeY() + "x" + vg.sizeZ());
         check("vox voxel placed + coloured", "minecraft:blue_concrete".equals(vg.get(1, 3, 0)) && vg.nonEmpty() == 1, vg.palette());
