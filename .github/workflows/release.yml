@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -35,4 +36,8 @@ jobs:
           awk -v head="## $version" '$0 == head {f = 1; next} /^## / {f = 0} f' CHANGELOG.md > notes.md
           jar="fabric/build/libs/syrkbuilder-fabric-$version+$mc.jar"
           ls -la fabric/build/libs
-          gh release create "$GITHUB_REF_NAME" "$jar" --title "SyrkBuilder $version for Minecraft $mc" --notes-file notes.md
+          tag="$GITHUB_REF_NAME"
+          if [ "$GITHUB_REF_TYPE" != "tag" ]; then
+            tag="v$version+$mc"
+          fi
+          gh release create "$tag" "$jar" --target "$GITHUB_SHA" --title "SyrkBuilder $version for Minecraft $mc" --notes-file notes.md
