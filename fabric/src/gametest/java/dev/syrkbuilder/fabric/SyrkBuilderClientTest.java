@@ -23,6 +23,11 @@ public class SyrkBuilderClientTest implements FabricClientGameTest {
 
     @Override
     public void runTest(ClientGameTestContext context) {
+        context.runOnClient(c -> {
+            c.options.renderDistance().set(2);
+            c.options.simulationDistance().set(5);
+            c.options.framerateLimit().set(30);
+        });
         try (TestSingleplayerContext world = context.worldBuilder()
             .adjustSettings(creator -> creator.setGameMode(WorldCreationUiState.SelectedGameMode.CREATIVE))
             .create()) {
