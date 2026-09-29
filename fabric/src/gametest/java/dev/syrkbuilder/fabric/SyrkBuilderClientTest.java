@@ -26,7 +26,7 @@ public class SyrkBuilderClientTest implements FabricClientGameTest {
         try (TestSingleplayerContext world = context.worldBuilder()
             .adjustSettings(creator -> creator.setGameMode(WorldCreationUiState.SelectedGameMode.CREATIVE))
             .create()) {
-            world.getConnection().waitForChunksRender();
+            world.getClientWorld().waitForChunksRender();
             TestServerContext server = world.getServer();
             server.runCommand("time set noon");
             server.runCommand("weather clear");
@@ -40,12 +40,12 @@ public class SyrkBuilderClientTest implements FabricClientGameTest {
             server.runCommand("fill %d %d %d %d %d %d minecraft:dirt".formatted(fx - 14, fy - 4, fz - 14, fx + 14, fy - 2, fz + 14));
             BlockPos target = new BlockPos(fx, fy - 1, fz + 6);
             context.waitFor(client -> client.level.getBlockState(target).is(Blocks.GRASS_BLOCK), 200);
-            context.getInput().lookAt(target);
+            lookAt(context, target);
             context.waitTicks(5);
             context.takeScreenshot("00_world");
 
             chat(context, world, "/sb sphere stone 2");
-            check("/sb sphere places stone at the aimed block", waitServer(server, s -> s.overworld().getBlockState(target.above()).is(Blocks.STONE)));
+            check("/sb sphere places stone at the aimed block", waitServer(context, server, s -> s.overworld().getBlockState(target.above()).is(Blocks.STONE)));
             context.waitTicks(5);
             context.takeScreenshot("01_sphere_command");
             check("sphere is a live preview", context.computeOnClient(c -> ClientData.pending() != null));
@@ -91,7 +91,7 @@ public class SyrkBuilderClientTest implements FabricClientGameTest {
             context.getInput().holdControl();
             context.getInput().pressKey(GLFW.GLFW_KEY_Z);
             context.getInput().releaseControl();
-            check("Ctrl+Z undoes the sphere", waitServer(server, s -> !s.overworld().getBlockState(target.above()).is(Blocks.STONE)
+            check("Ctrl+Z undoes the sphere", waitServer(context, server, s -> !s.overworld().getBlockState(target.above()).is(Blocks.STONE)
                 && !s.overworld().getBlockState(target.above().east()).is(Blocks.STONE)
                 && !s.overworld().getBlockState(target.above().west()).is(Blocks.STONE)));
 
@@ -115,12 +115,12 @@ public class SyrkBuilderClientTest implements FabricClientGameTest {
 
             server.runCommand("tp @a %d %d %d".formatted(fx, fy + 1, fz));
             context.waitTicks(10);
-            context.getInput().lookAt(target);
+            lookAt(context, target);
             context.waitTicks(2);
             BlockPos aimedBefore = context.computeOnClient(c -> SyrkBuilderClient.lookedAt(c.player));
             report.add("      aiming at " + aimedBefore + " before /sb tree");
             chat(context, world, "/sb tree oak");
-            boolean trunk = waitServer(server, s -> {
+            boolean trunk = waitServer(context, server, s -> {
                 for (int dx = -2; dx <= 2; dx++) {
                     for (int dz = -2; dz <= 2; dz++) {
                         if (s.overworld().getBlockState(target.offset(dx, 1, dz)).is(Blocks.OAK_LOG)) {
@@ -133,7 +133,7 @@ public class SyrkBuilderClientTest implements FabricClientGameTest {
             BlockPos aimed = context.computeOnClient(c -> SyrkBuilderClient.lookedAt(c.player));
             report.add("      aimed at " + aimed + ", target " + target);
             check("/sb tree grows a trunk where you aim", trunk);
-            context.getInput().lookAt(new BlockPos(fx, fy + 8, fz + 12));
+            lookAt(context, new BlockPos(fx, fy + 8, fz + 12));
             context.waitTicks(5);
             context.takeScreenshot("10_tree");
         } catch (Throwable t) {
@@ -155,18 +155,32 @@ public class SyrkBuilderClientTest implements FabricClientGameTest {
         context.waitForScreen(ChatScreen.class);
         context.getInput().typeChars(text);
         context.getInput().holdKeyFor(InputConstants.KEY_RETURN, 0);
-        world.getConnection().waitForServerboundPackets();
-        world.getConnection().waitForClientboundPackets();
         context.waitTicks(5);
     }
 
-    private boolean waitServer(TestServerContext server, java.util.function.Predicate<net.minecraft.server.MinecraftServer> condition) {
-        try {
-            server.waitFor(condition, 100);
-            return true;
-        } catch (Throwable t) {
-            return false;
+    private boolean waitServer(ClientGameTestContext context, TestServerContext server, java.util.function.Predicate<net.minecraft.server.MinecraftServer> condition) {
+        for (int i = 0; i < 100; i++) {
+            if (server.computeOnServer(condition::test)) {
+                return true;
+            }
+            context.waitTick();
         }
+        return false;
+    }
+
+    private void lookAt(ClientGameTestContext context, BlockPos pos) {
+        context.runOnClient(c -> {
+            var eye = c.player.getEyePosition();
+            double dx = pos.getX() + 0.5 - eye.x;
+            double dy = pos.getY() + 0.5 - eye.y;
+            double dz = pos.getZ() + 0.5 - eye.z;
+            float yaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90);
+            float pitch = (float) -Math.toDegrees(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)));
+            c.player.setYRot(yaw);
+            c.player.setXRot(pitch);
+            c.player.yRotO = yaw;
+            c.player.xRotO = pitch;
+        });
     }
 
     private boolean waitClient(ClientGameTestContext context, BooleanSupplier condition) {
