@@ -11,7 +11,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -101,7 +101,7 @@ final class EditorScreen extends Screen {
     private static boolean previewOn = true;
 
     private interface Painter {
-        void paint(GuiGraphics g, int x, int y, int w, int h, boolean hover);
+        void paint(GuiGraphicsExtractor g, int x, int y, int w, int h, boolean hover);
     }
 
     private record Element(int x, int y, int w, int h, boolean inPanel, Painter painter, Runnable click, String hint) {
@@ -1225,17 +1225,17 @@ final class EditorScreen extends Screen {
         super.removed();
     }
 
-    private void text(GuiGraphics g, String s, int x, int y, int color) {
-        g.drawString(font, s, x, y, color, false);
+    private void text(GuiGraphicsExtractor g, String s, int x, int y, int color) {
+        g.text(font, s, x, y, color, false);
     }
 
-    private static void box(GuiGraphics g, int x, int y, int w, int h, int color) {
+    private static void box(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
         g.fill(x + 1, y, x + w - 1, y + h, color);
         g.fill(x, y + 1, x + 1, y + h - 1, color);
         g.fill(x + w - 1, y + 1, x + w, y + h - 1, color);
     }
 
-    private static void outline(GuiGraphics g, int x, int y, int w, int h, int color) {
+    private static void outline(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
         g.fill(x + 1, y, x + w - 1, y + 1, color);
         g.fill(x + 1, y + h - 1, x + w - 1, y + h, color);
         g.fill(x, y + 1, x + 1, y + h - 1, color);
@@ -1272,7 +1272,7 @@ final class EditorScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         g.fill(0, 0, width, TOP, BAR);
         g.fill(0, TOP, width, TOP + 1, EDGE);
         g.fill(0, TOP + 1, LEFT_W, height - BOTTOM, PANEL);
@@ -1284,7 +1284,7 @@ final class EditorScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         if (looking) {
             updateLook();
             mouseX = -1;
@@ -1316,7 +1316,7 @@ final class EditorScreen extends Screen {
             }
         }
         g.disableScissor();
-        super.render(g, mouseX, mouseY, partialTick);
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
         for (Element e : elements) {
             if (!e.inPanel()) {
                 boolean hover = e.contains(mouseX, mouseY);

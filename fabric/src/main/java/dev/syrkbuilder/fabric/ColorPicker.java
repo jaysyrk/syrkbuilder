@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -195,7 +195,7 @@ final class ColorPicker {
     private static final int HUE_X = 108;
     private static final int RIGHT_X = 128;
 
-    void render(GuiGraphics g, Font font, int mx, int my) {
+    void render(GuiGraphicsExtractor g, Font font, int mx, int my) {
         hover = null;
         g.fill(x - 1, y - 1, x + W + 1, y + H + 1, EDGE);
         g.fill(x, y, x + W, y + H, BG);
@@ -437,14 +437,14 @@ final class ColorPicker {
         return Math.max(0, Math.min(1, v));
     }
 
-    private void tab(GuiGraphics g, Font font, int tx, int ty, String label, boolean on, int mx, int my) {
+    private void tab(GuiGraphicsExtractor g, Font font, int tx, int ty, String label, boolean on, int mx, int my) {
         int w = font.width(label) + 10;
         boolean over = mx >= tx && mx < tx + w && my >= ty && my < ty + 14;
         g.fill(tx, ty, tx + w, ty + 14, on ? ACCENT_DARK : over ? ITEM_HOVER : ITEM);
         text(g, font, label, tx + 5, ty + 3, on ? TEXT : DIM);
     }
 
-    private void button(GuiGraphics g, Font font, int bx, int by, int bw, String label, String hint, int mx, int my, boolean primary) {
+    private void button(GuiGraphicsExtractor g, Font font, int bx, int by, int bw, String label, String hint, int mx, int my, boolean primary) {
         boolean over = mx >= bx && mx < bx + bw && my >= by && my < by + 14;
         g.fill(bx, by, bx + bw, by + 14, primary ? (over ? 0xFF6E9BFF : ACCENT) : over ? ITEM_HOVER : ITEM);
         text(g, font, label, bx + (bw - font.width(label)) / 2, by + 3, primary ? 0xFFFFFFFF : TEXT);
@@ -453,7 +453,7 @@ final class ColorPicker {
         }
     }
 
-    private void segments(GuiGraphics g, Font font, int sx, int sy, int sw, String[] options, int selected, int mx, int my, String hint) {
+    private void segments(GuiGraphicsExtractor g, Font font, int sx, int sy, int sw, String[] options, int selected, int mx, int my, String hint) {
         int n = options.length;
         for (int i = 0; i < n; i++) {
             int a = sx + (int) Math.round(i * sw / (double) n);
@@ -470,15 +470,15 @@ final class ColorPicker {
         }
     }
 
-    private static void outline(GuiGraphics g, int ox, int oy, int w, int h, int color) {
+    private static void outline(GuiGraphicsExtractor g, int ox, int oy, int w, int h, int color) {
         g.fill(ox, oy, ox + w, oy + 1, color);
         g.fill(ox, oy + h - 1, ox + w, oy + h, color);
         g.fill(ox, oy, ox + 1, oy + h, color);
         g.fill(ox + w - 1, oy, ox + w, oy + h, color);
     }
 
-    private static void text(GuiGraphics g, Font font, String s, int tx, int ty, int color) {
-        g.drawString(font, s, tx, ty, color, false);
+    private static void text(GuiGraphicsExtractor g, Font font, String s, int tx, int ty, int color) {
+        g.text(font, s, tx, ty, color, false);
     }
 
     private static String fit(Font font, String s, int w) {

@@ -40,7 +40,7 @@ interface Feedback {
                 StatusLine.set(message);
                 Minecraft mc = Minecraft.getInstance();
                 if (mc.player != null) {
-                    mc.player.displayClientMessage(Component.literal(message), false);
+                    Chat.say(Component.literal(message));
                 }
             }
         };

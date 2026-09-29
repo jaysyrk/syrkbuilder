@@ -77,7 +77,7 @@ final class LocalBackend {
         StatusLine.set(text);
         mc.execute(() -> {
             if (mc.player != null) {
-                mc.player.displayClientMessage(Component.literal(text), false);
+                Chat.say(Component.literal(text));
             }
         });
     }

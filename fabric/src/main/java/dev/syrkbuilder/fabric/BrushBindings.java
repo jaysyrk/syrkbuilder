@@ -114,7 +114,7 @@ final class BrushBindings {
 
     static void tick(Minecraft mc) {
         LocalPlayer player = mc.player;
-        String brush = player == null || mc.screen != null ? null : boundTo(player);
+        String brush = player == null || mc.gui.screen() != null ? null : boundTo(player);
         if (brush == null || !mc.options.keyUse.isDown()) {
             stroke = 0;
             cooldown = 0;

@@ -18,11 +18,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -61,8 +61,8 @@ public final class SyrkBuilderClient implements ClientModInitializer {
         LocalFiles.models();
         LocalFiles.scripts();
         LocalBackend.init();
-        PayloadTypeRegistry.playC2S().register(SyrkPayload.TYPE, SyrkPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(SyrkPayload.TYPE, SyrkPayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(SyrkPayload.TYPE, SyrkPayload.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(SyrkPayload.TYPE, SyrkPayload.CODEC);
         ClientPlayNetworking.registerGlobalReceiver(SyrkPayload.TYPE, (payload, context) -> {
             Protocol.Data data = Protocol.decodeData(payload.data());
             if (data != null) {
@@ -75,58 +75,58 @@ public final class SyrkBuilderClient implements ClientModInitializer {
         });
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> dispatcher.register(
-            ClientCommandManager.literal("sb")
+            ClientCommands.literal("sb")
                 .executes(ctx -> forward(Feedback.of(ctx), "help"))
-                .then(ClientCommandManager.literal("pos1").executes(ctx -> setPos(Feedback.of(ctx), true)))
-                .then(ClientCommandManager.literal("pos2").executes(ctx -> setPos(Feedback.of(ctx), false)))
-                .then(ClientCommandManager.literal("sel").executes(ctx -> showSelection(Feedback.of(ctx))))
-                .then(ClientCommandManager.literal("clear").executes(ctx -> {
+                .then(ClientCommands.literal("pos1").executes(ctx -> setPos(Feedback.of(ctx), true)))
+                .then(ClientCommands.literal("pos2").executes(ctx -> setPos(Feedback.of(ctx), false)))
+                .then(ClientCommands.literal("sel").executes(ctx -> showSelection(Feedback.of(ctx))))
+                .then(ClientCommands.literal("clear").executes(ctx -> {
                     Selection.clear();
                     Feedback.of(ctx).info("§7Selection cleared.");
                     return 1;
                 }))
-                .then(ClientCommandManager.literal("noclip").executes(ctx -> {
+                .then(ClientCommands.literal("noclip").executes(ctx -> {
                     toggleNoclip(Feedback.of(ctx));
                     return 1;
                 }))
-                .then(ClientCommandManager.literal("wand").executes(ctx -> {
+                .then(ClientCommands.literal("wand").executes(ctx -> {
                     wandEnabled = !wandEnabled;
                     Feedback.of(ctx).info(wandEnabled
                         ? "§aGolden axe wand on §7- left-click = pos1, right-click = pos2."
                         : "§7Golden axe wand off.");
                     return 1;
                 }))
-                .then(ClientCommandManager.literal("import")
+                .then(ClientCommands.literal("import")
                     .executes(ctx -> listFiles(Feedback.of(ctx), "Models", LocalFiles.models(), MODEL_TYPES))
-                    .then(ClientCommandManager.argument("args", StringArgumentType.greedyString())
+                    .then(ClientCommands.argument("args", StringArgumentType.greedyString())
                         .suggests(suggestions("import"))
                         .executes(ctx -> importModel(Feedback.of(ctx), StringArgumentType.getString(ctx, "args")))))
-                .then(ClientCommandManager.literal("script")
+                .then(ClientCommands.literal("script")
                     .executes(ctx -> listFiles(Feedback.of(ctx), "Scripts", LocalFiles.scripts(), SCRIPT_TYPES))
-                    .then(ClientCommandManager.argument("args", StringArgumentType.greedyString())
+                    .then(ClientCommands.argument("args", StringArgumentType.greedyString())
                         .suggests(suggestions("script"))
                         .executes(ctx -> runScript(Feedback.of(ctx), StringArgumentType.getString(ctx, "args")))))
-                .then(ClientCommandManager.literal("brush")
+                .then(ClientCommands.literal("brush")
                     .executes(ctx -> forward(Feedback.of(ctx), "brush list"))
-                    .then(ClientCommandManager.literal("bind")
-                        .then(ClientCommandManager.argument("args", StringArgumentType.greedyString())
+                    .then(ClientCommands.literal("bind")
+                        .then(ClientCommands.argument("args", StringArgumentType.greedyString())
                             .suggests(suggestions("brush"))
                             .executes(ctx -> {
                                 BrushBindings.bind(Feedback.of(ctx), StringArgumentType.getString(ctx, "args"));
                                 return 1;
                             })))
-                    .then(ClientCommandManager.literal("unbind").executes(ctx -> {
+                    .then(ClientCommands.literal("unbind").executes(ctx -> {
                         BrushBindings.unbind(Feedback.of(ctx));
                         return 1;
                     }))
-                    .then(ClientCommandManager.literal("binds").executes(ctx -> {
+                    .then(ClientCommands.literal("binds").executes(ctx -> {
                         BrushBindings.list(Feedback.of(ctx));
                         return 1;
                     }))
-                    .then(ClientCommandManager.argument("args", StringArgumentType.greedyString())
+                    .then(ClientCommands.argument("args", StringArgumentType.greedyString())
                         .suggests(suggestions("brush"))
                         .executes(ctx -> forward(Feedback.of(ctx), "brush " + StringArgumentType.getString(ctx, "args")))))
-                .then(ClientCommandManager.argument("command", StringArgumentType.greedyString())
+                .then(ClientCommands.argument("command", StringArgumentType.greedyString())
                     .suggests(suggestions(null))
                     .executes(ctx -> forward(Feedback.of(ctx), StringArgumentType.getString(ctx, "command"))))));
 
@@ -136,7 +136,7 @@ public final class SyrkBuilderClient implements ClientModInitializer {
             }
             if (!pos.equals(Selection.pos1())) {
                 Selection.setPos1(pos);
-                player.displayClientMessage(Component.literal("§dpos1 §7set to §f" + Selection.describe(pos) + volumeSuffix()), false);
+                Chat.say(Component.literal("§dpos1 §7set to §f" + Selection.describe(pos) + volumeSuffix()));
             }
             return InteractionResult.FAIL;
         });
@@ -152,26 +152,26 @@ public final class SyrkBuilderClient implements ClientModInitializer {
             BlockPos pos = hit.getBlockPos();
             if (!pos.equals(Selection.pos2())) {
                 Selection.setPos2(pos);
-                player.displayClientMessage(Component.literal("§dpos2 §7set to §f" + Selection.describe(pos) + volumeSuffix()), false);
+                Chat.say(Component.literal("§dpos2 §7set to §f" + Selection.describe(pos) + volumeSuffix()));
             }
             return InteractionResult.FAIL;
         });
 
-        editorKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.syrkbuilder.editor", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_F7, KEY_CATEGORY));
-        noclipKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.syrkbuilder.noclip", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, KEY_CATEGORY));
+        editorKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.syrkbuilder.editor", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_F7, KEY_CATEGORY));
+        noclipKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.syrkbuilder.noclip", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, KEY_CATEGORY));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             particles.tick(client);
             EditorMovement.tick(client);
             BrushBindings.tick(client);
             while (noclipKey.consumeClick()) {
-                if (client.screen == null) {
+                if (client.gui.screen() == null) {
                     toggleNoclip(Feedback.chat());
                 }
             }
             while (editorKey.consumeClick()) {
-                if (client.screen == null && client.player != null) {
-                    client.setScreen(new EditorScreen());
+                if (client.gui.screen() == null && client.player != null) {
+                    client.gui.setScreen(new EditorScreen());
                 }
             }
         });
@@ -315,15 +315,15 @@ public final class SyrkBuilderClient implements ClientModInitializer {
             }
             if (error != null) {
                 Throwable cause = error.getCause() != null ? error.getCause() : error;
-                player.displayClientMessage(Component.literal("§cCouldn't import " + name + ": " + cause.getMessage()), false);
+                Chat.say(Component.literal("§cCouldn't import " + name + ": " + cause.getMessage()));
                 return;
             }
             for (String warning : warnings) {
-                player.displayClientMessage(Component.literal("§e" + warning), false);
+                Chat.say(Component.literal("§e" + warning));
             }
             String safeName = name.replaceAll("[^A-Za-z0-9_.-]", "_");
             upload(player, bytes, id -> "upload-paste " + id + " name=" + safeName + " " + pasteOptions);
-            player.displayClientMessage(Component.literal(String.format("§7Uploading §f%s §7(%,d KB)...", name, Math.max(1, bytes.length / 1024))), false);
+            Chat.say(Component.literal(String.format("§7Uploading §f%s §7(%,d KB)...", name, Math.max(1, bytes.length / 1024))));
         }));
         return 1;
     }
