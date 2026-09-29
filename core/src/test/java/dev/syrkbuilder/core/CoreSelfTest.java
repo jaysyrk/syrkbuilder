@@ -1144,6 +1144,32 @@ public final class CoreSelfTest {
         Result needsBlocks = brush(r, "brush sphere 3", new int[]{0, 64, 0});
         check("block brushes need blocks", needsBlocks.kind() == Result.Kind.ERROR, needsBlocks);
 
+        FlatWorld room = meadow();
+        for (int y = 65; y <= 72; y++) {
+            for (int z = -6; z <= 6; z++) {
+                room.blocks.put(FlatWorld.key(3, y, z), "minecraft:stone");
+            }
+        }
+        room.run(brush(room, "brush paint 6 grad:white_wool,gray_wool,black_wool", new int[]{3, 66, 0}).stream());
+        Set<String> floor = new java.util.HashSet<>();
+        Set<String> wall = new java.util.HashSet<>();
+        for (int z = -6; z <= 6; z++) {
+            for (int x = -3; x <= 2; x++) {
+                String b = room.blockState(x, 64, z);
+                if (b.endsWith("_wool")) {
+                    floor.add(b);
+                }
+            }
+            for (int y = 65; y <= 72; y++) {
+                String b = room.blockState(3, y, z);
+                if (b.endsWith("_wool")) {
+                    wall.add(b);
+                }
+            }
+        }
+        check("painting a wall with a gradient leaves one clean block on the floor", floor.size() == 1, floor);
+        check("the wall itself still blends", wall.size() >= 2, wall);
+
         FlatWorld pan = new FlatWorld(0);
         pan.run(brush(pan, "brush sphere 4 stone ry=1", new int[]{0, 100, 0}).stream());
         check("ry= flattens a sphere brush", pan.blockId(4, 100, 0).equals("minecraft:stone") && pan.blockId(0, 101, 0).equals("minecraft:stone")

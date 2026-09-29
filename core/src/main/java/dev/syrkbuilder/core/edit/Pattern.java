@@ -164,7 +164,7 @@ public final class Pattern {
 
     // With a range, the first and last block sit at fixed world positions, so a brush stroke blends as one
     // gradient instead of restarting in every dab. Without one, the gradient stretches over the shape it fills.
-    private String pickGradient(int x, int y, int z) {
+    private String pickGradient(int x, int y, int z, double dither) {
         double at;
         double lo;
         double hi;
@@ -193,7 +193,7 @@ public final class Pattern {
             hi = high(dirX, bounds.minX(), bounds.maxX()) + high(dirY, bounds.minY(), bounds.maxY()) + high(dirZ, bounds.minZ(), bounds.maxZ());
         }
         double t = hi == lo ? 0 : Math.max(0, Math.min(1, (at - lo) / (hi - lo)));
-        double scaled = t * (blocks.size() - 1) + dither(x, y, z);
+        double scaled = t * (blocks.size() - 1) + dither;
         int idx = Math.max(0, Math.min(blocks.size() - 1, (int) Math.floor(scaled)));
         return blocks.get(idx);
     }
@@ -248,9 +248,22 @@ public final class Pattern {
         return this;
     }
 
+    // A face that points along the gradient (a floor's top under an upward gradient) sits at a single point on it.
+    public boolean along(int nx, int ny, int nz) {
+        return gradient && radial == 0 && Math.abs(nx * dirX + ny * dirY + nz * dirZ) >= 0.7;
+    }
+
+    // The nearest gradient step with no dithering, for surfaces where a dithered blend would only speckle.
+    public String pickClean(int x, int y, int z) {
+        if (gradient && blocks.size() > 1) {
+            return pickGradient(x, y, z, 0.5);
+        }
+        return pick(x, y, z);
+    }
+
     public String pick(int x, int y, int z) {
         if (gradient && blocks.size() > 1) {
-            return pickGradient(x, y, z);
+            return pickGradient(x, y, z, dither(x, y, z));
         }
         if (blocks.size() == 1) {
             return blocks.get(0);

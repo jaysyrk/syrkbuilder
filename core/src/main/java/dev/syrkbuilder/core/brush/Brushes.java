@@ -60,7 +60,7 @@ public final class Brushes {
                         }
                         case PAINT -> {
                             if (!Surface.air(id) && exposed(world, x, y, z)) {
-                                out.set(x, y, z, s.pattern().pick(x, y, z));
+                                out.set(x, y, z, paint(s.pattern(), world, x, y, z));
                             }
                         }
                         case REPLACE -> {
@@ -79,6 +79,22 @@ public final class Brushes {
             }
         }
     }
+
+    // Dithering blends a gradient across the height of a wall, but a block whose open faces all point along the
+    // gradient (the floor at the foot of that wall) sits at one point on it, where dithering only speckles.
+    private static String paint(Pattern p, WorldView w, int x, int y, int z) {
+        if (p.isGradient()) {
+            for (int[] f : FACES) {
+                if (Surface.soft(w.blockId(x + f[0], y + f[1], z + f[2])) && !p.along(f[0], f[1], f[2])) {
+                    return p.pick(x, y, z);
+                }
+            }
+            return p.pickClean(x, y, z);
+        }
+        return p.pick(x, y, z);
+    }
+
+    private static final int[][] FACES = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
 
     private static boolean exposed(WorldView w, int x, int y, int z) {
         return Surface.soft(w.blockId(x + 1, y, z)) || Surface.soft(w.blockId(x - 1, y, z)) || Surface.soft(w.blockId(x, y + 1, z))
