@@ -6,6 +6,7 @@
 - Magic select: `/sb select` grabs everything connected to the block you aim at (`-a` for a whole build of mixed blocks)
 - Selection tools: `expand`, `contract`, `shift` (by direction, `vert` or `all`), `size`, `count <blocks>` and `distr` for a block breakdown
 - All of these are in the Selection tab of the F7 editor too
+- `cut`, `smooth` (evens out terrain inside the selection), and around where you look: `drain`, `snow`, `thaw`, `green`
 - Heightmap import: put a greyscale .png/.jpg in `.minecraft/syrkbuilder/heightmaps` and import it as terrain (`/sb import <file> size= height=`, or the Import tab)
 - New Settings tab in the F7 editor (also `/sb settings`): rebind the editor and noclip keys, noclip toggle or hold mode, fly speed, look sensitivity, preview on by default, golden axe wand, quiet chat and particle toggles. Saved in `config/syrkbuilder.properties`
 - Dragging to place no longer fills chat: the first click reports, the rest show in the status bar. Errors still go to chat

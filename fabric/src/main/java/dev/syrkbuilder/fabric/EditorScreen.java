@@ -88,6 +88,7 @@ final class EditorScreen extends Screen {
     private static int modelIndex;
     private static String modelSize = "48";
     private static String heightmapHeight = "";
+    private static String touchRadius = "12";
     private static int palette;
     private static boolean solid;
     private static int modelRotation;
@@ -530,6 +531,16 @@ final class EditorScreen extends Screen {
             }
             return cmd.toString();
         }, () -> Math.max(6, number(tRadius, 48) * 0.7), true);
+        p.section("Touch-ups");
+        p.field("Radius", touchRadius, "12", v -> touchRadius = v);
+        p.buttons("Snow", () -> run("snow " + touchRadius()), "Thaw", () -> run("thaw " + touchRadius()));
+        p.buttons("Green", () -> run("green " + touchRadius()), "Drain", () -> run("drain " + touchRadius()));
+        p.note("§8Around the block you aim at. Green turns dirt to grass; Drain removes water and lava.");
+    }
+
+    private static String touchRadius() {
+        String n = touchRadius.trim();
+        return n.matches("\\d+") && !n.equals("0") ? n : "12";
     }
 
     private void brushes(Panel p) {
@@ -645,6 +656,7 @@ final class EditorScreen extends Screen {
         p.note("§8Look = the way you face. Move takes the selection along; Stack repeats it next to itself.");
         p.section("Edit");
         p.buttons("Hollow", () -> run("hollow"), "Naturalize", () -> run("naturalize"));
+        p.button("Smooth terrain in selection", false, () -> run("smooth"));
         p.button("Overlay with blocks above", false, () -> run("overlay " + blocks(selBlocks)));
         p.buttons("Count blocks", () -> run("count " + blocks(selBlocks)), "Block list", () -> run("distr"));
         p.section("Magic select");
@@ -666,7 +678,7 @@ final class EditorScreen extends Screen {
     }
 
     private void clipboard(Panel p) {
-        p.button("Copy selection", false, () -> run("copy"));
+        p.buttons("Copy selection", () -> run("copy"), "Cut selection", () -> run("cut"));
         p.section("Paste");
         p.segments("Rotate", ROTATIONS, pasteRotation, v -> pasteRotation = v);
         p.toggle("Skip air", () -> pasteSkipAir, v -> pasteSkipAir = v, "Air in the clipboard doesn't overwrite");
