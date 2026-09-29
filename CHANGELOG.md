@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Brushes take `seed=` to repeat the exact same random result, e.g. `/sb brush roughen 5 seed=7`
+- Opening the editor with a key no longer puts the cursor in a text box first, which could swallow F7 and the tool shortcuts
+
 ## 1.2.0
 
 - Gradients can run any direction: `grad(down):`, east, west, north, south, `grad(in):` towards the centre, `grad(look):` the way you're facing, or any direction like `grad(1/0/1):`
