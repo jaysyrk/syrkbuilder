@@ -47,6 +47,9 @@ final class EditorScreen extends Screen {
     private static final int BRUSHES = 2;
     private static final String[] SHAPES = {"sphere", "ellipsoid", "dome", "cyl", "cone", "pyramid", "circle", "disc", "torus", "helix"};
     private static final String[] SEL_ACTIONS = {"set", "walls", "outline", "replace", "line"};
+    private static final String[] DIRECTIONS = {"look", "up", "down", "north", "south", "east", "west", "all"};
+    private static String selAmount = "1";
+    private static int selDirection;
     private static final String[] ROTATIONS = {"0°", "90°", "180°", "270°"};
 
     private static int tool;
@@ -632,6 +635,33 @@ final class EditorScreen extends Screen {
             String a = SEL_ACTIONS[selAction];
             run(replace ? "replace " + blocks(selFrom) + " " + blocks(selBlocks) : a + " " + blocks(selBlocks));
         });
+        p.section("Transform");
+        p.field("Amount", selAmount, "1", v -> selAmount = v);
+        p.chips(DIRECTIONS, null, selDirection, 4, v -> selDirection = v);
+        p.buttons("Move", () -> run("move " + amount() + dirWord(false)), "Stack", () -> run("stack " + amount() + dirWord(false)));
+        p.buttons("Expand", () -> run("expand " + amount() + dirWord(true)), "Contract", () -> run("contract " + amount() + dirWord(true)));
+        p.button("Shift selection only", false, () -> run("shift " + amount() + dirWord(false)));
+        p.note("§8Look = the way you face. Move takes the selection along; Stack repeats it next to itself.");
+        p.section("Edit");
+        p.buttons("Hollow", () -> run("hollow"), "Naturalize", () -> run("naturalize"));
+        p.button("Overlay with blocks above", false, () -> run("overlay " + blocks(selBlocks)));
+        p.buttons("Count blocks", () -> run("count " + blocks(selBlocks)), "Block list", () -> run("distr"));
+        p.section("Magic select");
+        p.buttons("Same block", () -> run("select"), "Whole build", () -> run("select -a"));
+        p.note("§8Selects everything connected to the block you aim at.");
+    }
+
+    private static String amount() {
+        String n = selAmount.trim();
+        return n.matches("\\d+") && !n.equals("0") ? n : "1";
+    }
+
+    private static String dirWord(boolean allowAll) {
+        String d = DIRECTIONS[selDirection];
+        if (d.equals("look") || d.equals("all") && !allowAll) {
+            return "";
+        }
+        return " " + d;
     }
 
     private void clipboard(Panel p) {

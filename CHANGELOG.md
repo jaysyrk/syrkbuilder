@@ -2,6 +2,10 @@
 
 ## 1.1.0
 
+- Selection edits: `move` (takes the selection along), `stack`, `hollow`, `overlay`, `naturalize`
+- Magic select: `/sb select` grabs everything connected to the block you aim at (`-a` for a whole build of mixed blocks)
+- Selection tools: `expand`, `contract`, `shift` (by direction, `vert` or `all`), `size`, `count <blocks>` and `distr` for a block breakdown
+- All of these are in the Selection tab of the F7 editor too
 - New Settings tab in the F7 editor (also `/sb settings`): rebind the editor and noclip keys, noclip toggle or hold mode, fly speed, look sensitivity, preview on by default, golden axe wand, quiet chat and particle toggles. Saved in `config/syrkbuilder.properties`
 - Dragging to place no longer fills chat: the first click reports, the rest show in the status bar. Errors still go to chat
 - Fixed editor shortcuts (undo/redo, tool numbers, preview keys) not working after opening the editor, because a text box grabbed focus

@@ -141,6 +141,17 @@ public class SyrkBuilderClientTest implements FabricClientGameTest {
             lookAt(context, new BlockPos(fx, fy + 8, fz + 12));
             context.waitTicks(5);
             context.takeScreenshot("10_tree");
+
+            BlockPos block = target.offset(4, 1, 0);
+            server.runCommand("setblock %d %d %d minecraft:gold_block".formatted(block.getX(), block.getY(), block.getZ()));
+            context.runOnClient(c -> {
+                Selection.setPos1(block);
+                Selection.setPos2(block);
+            });
+            chat(context, world, "/sb move 2 up");
+            check("/sb move moves the selected blocks", waitServer(context, server, s -> s.overworld().getBlockState(block.above(2)).is(Blocks.GOLD_BLOCK)
+                && s.overworld().getBlockState(block).isAir()));
+            check("/sb move takes the selection along", waitClient(context, () -> context.computeOnClient(c -> block.above(2).equals(Selection.pos1()))));
         } catch (Throwable t) {
             failed = true;
             report.add("CRASH " + t);

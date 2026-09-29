@@ -215,6 +215,10 @@ public final class Engine<W, B> {
         final Request req = request;
         Result result = commands.run(request, platform.view(world), session(player), services);
         result.warnings().forEach(w -> reply.accept("&e" + w));
+        if (result.select() != null) {
+            dev.syrkbuilder.core.edit.Box s = result.select();
+            reply.accept(Protocol.dataLine("selection", s.minX() + " " + s.minY() + " " + s.minZ() + " " + s.maxX() + " " + s.maxY() + " " + s.maxZ()));
+        }
         if ((first.equals("template") || first.equals("tpl")) && result.kind() == Result.Kind.MESSAGE) {
             sendTemplates(reply);
         }
@@ -443,7 +447,7 @@ public final class Engine<W, B> {
         String cmd = args.lower(0);
         String again = switch (cmd) {
             case "upload-paste" -> "paste " + args.rest(2);
-            case "upload-script" -> null;
+            case "upload-script", "move", "stack" -> null;
             default -> req.command();
         };
         return again == null ? null : new Request(again.trim(), req.target(), req.pos1(), req.pos2(), req.feet(), req.yaw(), req.pitch());
