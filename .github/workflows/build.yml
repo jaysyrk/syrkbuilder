@@ -22,17 +22,6 @@ jobs:
           chmod +x gradlew
           ./gradlew build --continue
 
-      - name: Minecraft API dump
-        if: failure()
-        run: |
-          JARS=$(find ~/.gradle/caches .gradle -name '*.jar' 2>/dev/null | grep -i minecraft | grep -iv -e sources -e fabric-api -e loader | head -20)
-          echo "$JARS"
-          CP=$(echo "$JARS" | tr '\n' ':')
-          for c in net.minecraft.client.gui.GuiGraphicsExtractor net.minecraft.client.gui.screens.Screen net.minecraft.client.gui.Gui net.minecraft.client.gui.components.ChatComponent net.minecraft.client.gui.components.EditBox net.minecraft.client.player.LocalPlayer net.minecraft.world.entity.player.Player net.minecraft.world.entity.Entity net.minecraft.client.Minecraft; do
-            echo "=== $c"
-            javap -cp "$CP" "$c" | grep -iE "screen|gui|chat|message|item|scissor|fill|text|string|enable|disable|abilit|noPhysics|turn|pick|bordered|textcolor|setValue|getValue|responder|maxlength|sensitivity|options|player|level|window|execute|singleplayer|hud|class " | head -80
-          done
-
       - uses: actions/upload-artifact@v4
         with:
           name: SyrkBuilder-jars

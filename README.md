@@ -1,6 +1,6 @@
 # SyrkBuilder
 
-A building editor for Minecraft 1.21.11 (Fabric). Shapes, terrain, sculpting brushes, trees, paths, fills,
+A building editor for Minecraft 26.2 (Fabric). Shapes, terrain, sculpting brushes, trees, paths, fills,
 colour gradients, model and schematic import, scripting and noclip, all in one in-game editor, with a live
 preview and an undo history you never lose.
 
