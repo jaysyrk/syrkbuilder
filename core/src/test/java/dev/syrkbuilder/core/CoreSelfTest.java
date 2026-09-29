@@ -839,6 +839,14 @@ public final class CoreSelfTest {
         check("stamp brush paints the clipboard", world.blockState(770, 65, 770).equals("minecraft:emerald_block"), world.blockId(770, 65, 770));
         send.accept("script maze", sel.apply(new int[]{20, 64, 20}, new int[]{34, 64, 34}));
         check("engine runs bundled script", world.blocks.containsValue("minecraft:oak_leaves[persistent=true]"), msgs.subList(Math.max(0, msgs.size() - 3), msgs.size()));
+        for (String[] sc : new String[][]{{"house", "800", "minecraft:oak_door"}, {"lighthouse", "850", "minecraft:sea_lantern"}, {"well", "900", "minecraft:water"}}) {
+            int spot = Integer.parseInt(sc[1]);
+            int before = msgs.size();
+            send.accept("script " + sc[0], look.apply(new int[]{spot, 64, spot}));
+            boolean errors = msgs.subList(before, msgs.size()).stream().anyMatch(m -> m.startsWith("&c"));
+            boolean placed = world.blocks.values().stream().anyMatch(b -> b.startsWith(sc[2]));
+            check("example script " + sc[0] + " builds", !errors && placed, msgs.subList(before, msgs.size()));
+        }
         msgs.clear();
         send.accept("set bogus_block", sel.apply(new int[]{5, 70, 5}, new int[]{5, 70, 5}));
         check("engine reports bad block", msgs.stream().anyMatch(m -> m.contains("Unknown block")), msgs);
