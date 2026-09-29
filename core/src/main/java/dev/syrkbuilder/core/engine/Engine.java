@@ -168,6 +168,10 @@ public final class Engine<W, B> {
                 reply.accept(message == null ? "&cNoclip isn't available here." : message);
                 return;
             }
+            case "biome" -> {
+                biome(world, request, args, reply);
+                return;
+            }
             case "confirm", "ok", "keep" -> {
                 confirm(player, reply, true);
                 return;
@@ -602,6 +606,48 @@ public final class Engine<W, B> {
 
     private static int[] add(int[] p, int[] d) {
         return p == null ? null : new int[]{p[0] + d[0], p[1] + d[1], p[2] + d[2]};
+    }
+
+    private void biome(W world, Request req, dev.syrkbuilder.core.command.Args a, Consumer<String> reply) {
+        String name = a.lower(1);
+        if (name.isEmpty()) {
+            reply.accept("&cUsage: /sb biome <biome> [radius] &7or &f/sb biome <biome> -s&7 for your selection. Try /sb biome plains");
+            return;
+        }
+        if (!name.matches("[a-z0-9_.:/-]+")) {
+            reply.accept("&cThat isn't a biome name.");
+            return;
+        }
+        if (name.indexOf(':') < 0) {
+            name = "minecraft:" + name;
+        }
+        int[] box;
+        dev.syrkbuilder.core.edit.WorldView view = platform.view(world);
+        if (a.flag("s")) {
+            if (req.pos1() == null || req.pos2() == null) {
+                reply.accept("&cSelect an area first, or leave out -s to paint around where you look.");
+                return;
+            }
+            box = new int[]{Math.min(req.pos1()[0], req.pos2()[0]), Math.min(req.pos1()[1], req.pos2()[1]), Math.min(req.pos1()[2], req.pos2()[2]),
+                Math.max(req.pos1()[0], req.pos2()[0]), Math.max(req.pos1()[1], req.pos2()[1]), Math.max(req.pos1()[2], req.pos2()[2])};
+        } else {
+            int[] t = req.target() != null ? req.target() : req.feet();
+            if (t == null) {
+                reply.accept("&cLook at a block.");
+                return;
+            }
+            int r = a.intArg(2, "radius", 16, 1, 128);
+            box = new int[]{t[0] - r, t[1] - 32, t[2] - r, t[0] + r, t[1] + 48, t[2] + r};
+        }
+        box[1] = Math.max(view.minY(), box[1]);
+        box[4] = Math.min(view.maxY() - 1, box[4]);
+        long cells = (long) ((box[3] - box[0]) / 4 + 1) * ((box[4] - box[1]) / 4 + 1) * ((box[5] - box[2]) / 4 + 1);
+        if (cells > 32768) {
+            reply.accept("&cThat area is too big for one biome change - use a smaller radius or selection.");
+            return;
+        }
+        String result = platform.fillBiome(world, box, name);
+        reply.accept(result == null ? "&cBiome painting isn't available here." : result);
     }
 
     public static int[] direction(String word, float yaw, int n) {

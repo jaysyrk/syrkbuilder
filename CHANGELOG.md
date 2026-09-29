@@ -10,6 +10,7 @@
 - `text` writes words in blocks (pixel font, any size, standing or flat), `arch` builds an arch facing you, `replacenear` swaps blocks around where you look
 - Stamp brush: paints your clipboard wherever you click or drag, randomly turned
 - Three new example scripts: `house`, `lighthouse` and `well`
+- Biome painting: `/sb biome <biome> [radius]` around where you look, or `-s` for the selection (works on servers too)
 - Heightmap import: put a greyscale .png/.jpg in `.minecraft/syrkbuilder/heightmaps` and import it as terrain (`/sb import <file> size= height=`, or the Import tab)
 - New Settings tab in the F7 editor (also `/sb settings`): rebind the editor and noclip keys, noclip toggle or hold mode, fly speed, look sensitivity, preview on by default, golden axe wand, quiet chat and particle toggles. Saved in `config/syrkbuilder.properties`
 - Dragging to place no longer fills chat: the first click reports, the rest show in the status bar. Errors still go to chat

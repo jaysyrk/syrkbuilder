@@ -170,6 +170,11 @@ public class SyrkBuilderClientTest implements FabricClientGameTest {
                 return false;
             }));
             context.takeScreenshot("11_well");
+
+            lookAt(context, target);
+            context.waitTicks(2);
+            chat(context, world, "/sb biome desert 6");
+            check("/sb biome paints the biome", waitServer(context, server, s -> s.overworld().getBiome(target).is(net.minecraft.world.level.biome.Biomes.DESERT)));
         } catch (Throwable t) {
             failed = true;
             report.add("CRASH " + t);

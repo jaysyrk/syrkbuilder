@@ -83,4 +83,16 @@ final class PaperPlatform implements Platform<World, BlockData> {
     public void runOnMainThread(Runnable task) {
         Bukkit.getScheduler().runTask(plugin, task);
     }
+
+    @Override
+    public String fillBiome(World world, int[] box, String biome) {
+        org.bukkit.NamespacedKey key = org.bukkit.NamespacedKey.fromString(biome);
+        if (key == null || org.bukkit.Registry.BIOME.get(key) == null) {
+            return "&cUnknown biome '" + biome + "'.";
+        }
+        String command = String.format("execute in %s run fillbiome %d %d %d %d %d %d %s", world.getKey(),
+            box[0], box[1], box[2], box[3], box[4], box[5], biome);
+        boolean ok = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "minecraft:" + command);
+        return ok ? "&aBiome set to &f" + biome.replace("minecraft:", "") + "&7. &8Biomes aren't part of undo." : "&cCouldn't set the biome.";
+    }
 }
