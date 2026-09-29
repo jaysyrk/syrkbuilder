@@ -991,6 +991,7 @@ final class EditorScreen extends Screen {
     private void openPicker(Consumer<String> set) {
         int px = Math.max(LEFT_W + 4, LEFT_W + (width - LEFT_W - RIGHT_W - ColorPicker.W) / 2);
         int py = Math.max(TOP + 4, TOP + (height - TOP - BOTTOM - ColorPicker.H) / 2);
+        py = Math.max(2, Math.min(py, height - ColorPicker.H - 2));
         picker = new ColorPicker(px, py, set, () -> picker = null);
     }
 
