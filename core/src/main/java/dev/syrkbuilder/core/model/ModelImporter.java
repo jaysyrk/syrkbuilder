@@ -9,7 +9,10 @@ public final class ModelImporter {
     private ModelImporter() {
     }
 
-    public record Options(int size, boolean solid, String palette) {
+    public record Options(int size, boolean solid, String palette, int height) {
+        public Options(int size, boolean solid, String palette) {
+            this(size, solid, palette, 0);
+        }
     }
 
     public static BlockGrid importFile(Path file, Options options) throws IOException {
@@ -18,6 +21,9 @@ public final class ModelImporter {
 
     public static BlockGrid importFile(Path file, Options options, java.util.List<String> warnings) throws IOException {
         String name = file.getFileName().toString().toLowerCase(Locale.ROOT);
+        if (name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg")) {
+            return Heightmap.load(file, options.size(), options.height());
+        }
         VoxelModel voxels;
         if (name.endsWith(".vox")) {
             voxels = VoxLoader.load(file);
@@ -31,7 +37,7 @@ public final class ModelImporter {
             } else if (name.endsWith(".glb") || name.endsWith(".gltf")) {
                 mesh = GltfLoader.load(file);
             } else {
-                throw new IOException("Unsupported model type - use .obj, .glb, .gltf or .vox");
+                throw new IOException("Unsupported model type - use .obj, .glb, .gltf, .vox, or a .png/.jpg heightmap");
             }
             voxels = Voxelizer.voxelize(mesh, options.size(), options.solid());
         }

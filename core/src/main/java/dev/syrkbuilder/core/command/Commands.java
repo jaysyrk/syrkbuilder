@@ -48,6 +48,8 @@ public final class Commands {
         "&eFill&7: fill <blocks> [radius] [mode=hole|connected|room] &8(bucket fill from the block you aim at)",
         "&ePaths&7: path add (repeat), then path <road|wall|tunnel|river|bridge|line> [width] [blocks]; path undo|clear",
         "&ePreview&7: the last placement stays live - nudge <dx dy dz|up|left|forward..> [n], turn [deg], cancel, confirm; preview on|off",
+        "&eSelection edits&7: move [n] [dir], stack [n] [dir], hollow [thickness], overlay <blocks> [depth], naturalize",
+        "&eSelection tools&7: select [-a] [-d] (magic select what you look at), expand|contract|shift <n> [dir|vert], size, count <blocks>, distr",
         "&eClipboard&7: copy, paste [rotate=90] [flip] [-a] [swap=stone:andesite], rotate <deg>, flip",
         "&eTemplates&7: template save|export|paste|load|list|info|delete <name> (reads .schem/.litematic too), marker <name>|list|remove|clear",
         "&eImport&7: import <file> [size=64] [palette=all] [-s solid] &8(files in .minecraft/syrkbuilder/models)",
@@ -120,6 +122,18 @@ public final class Commands {
                 case "upload-paste" -> uploadPaste(req, a, session);
                 case "upload-script" -> uploadScript(req, a, world, session, services);
                 case "script" -> serverScript(req, a, world, services);
+                case "move" -> move(req, a, world);
+                case "stack" -> stack(req, a, world);
+                case "hollow" -> hollow(req, a, world);
+                case "overlay" -> overlay(req, a, world);
+                case "naturalize", "naturalise" -> selection(req, "naturalize", box -> SelectionOps.naturalize(box, world));
+                case "count" -> count(req, a, world);
+                case "distr", "distribution", "analyze", "analyse" -> distr(req, world);
+                case "select", "magic", "sel+" -> magic(req, a, world);
+                case "expand" -> resize(req, a, 1, "expand", world);
+                case "contract" -> resize(req, a, -1, "contract", world);
+                case "shift" -> shiftSelection(req, a);
+                case "size" -> size(req);
                 default -> Result.error("Unknown command '" + cmd + "'. Try /sb help");
             };
         }
@@ -430,6 +444,165 @@ public final class Commands {
         EditStream make(Box box);
     }
 
+    private Box checkedSelection(Request req) {
+        Box box = selectionBox(req);
+        if (box.volume() > maxVolume) {
+            throw new IllegalArgumentException("Selection is " + box.volume() + " blocks - the limit is " + maxVolume + ".");
+        }
+        return box;
+    }
+
+    private static int[] offset(Request req, Args a, int from, int def) {
+        String w = a.lower(from);
+        if (w.matches("-?\\d+") && a.lower(from + 1).matches("-?\\d+") && a.lower(from + 2).matches("-?\\d+")) {
+            return new int[]{a.intArg(from, "x", 0, -4096, 4096), a.intArg(from + 1, "y", 0, -4096, 4096), a.intArg(from + 2, "z", 0, -4096, 4096)};
+        }
+        int n;
+        String dir;
+        if (w.matches("\\d+")) {
+            n = a.intArg(from, "n", def, 1, 4096);
+            dir = a.lower(from + 1);
+        } else {
+            n = a.intValue("n", def, 1, 4096);
+            dir = w;
+        }
+        int[] unit = Directions.unit(dir, req.yaw(), req.pitch());
+        if (unit == null) {
+            throw new IllegalArgumentException("Directions: up, down, left, right, forward, back, north, south, east, west (or leave it out to use where you look).");
+        }
+        return new int[]{unit[0] * n, unit[1] * n, unit[2] * n};
+    }
+
+    private Result move(Request req, Args a, WorldView world) {
+        Box box = checkedSelection(req).clampY(world.minY(), world.maxY());
+        int[] d = offset(req, a, 1, 1);
+        BlockGrid grid = SelectionOps.read(box, world);
+        Pattern leave = a.has("leave") ? Pattern.parse(a.string("leave", "air")) : null;
+        Box dest = SelectionOps.shift(box, d[0], d[1], d[2]);
+        return Result.edit("move", SelectionOps.move(box, grid, d[0], d[1], d[2], a.flag("a"), leave),
+            List.of(String.format("&7Moved by &f%d %d %d&7 - the selection moved with it.", d[0], d[1], d[2]))).selecting(dest);
+    }
+
+    private Result stack(Request req, Args a, WorldView world) {
+        Box box = checkedSelection(req).clampY(world.minY(), world.maxY());
+        String w = a.lower(1);
+        int count = w.matches("\\d+") ? a.intArg(1, "n", 1, 1, 256) : a.intValue("n", 1, 1, 256);
+        String dir = w.matches("\\d+") ? a.lower(2) : w;
+        int[] unit = Directions.unit(dir, req.yaw(), req.pitch());
+        if (unit == null) {
+            throw new IllegalArgumentException("Directions: up, down, left, right, forward, back, north, south, east, west.");
+        }
+        if (box.volume() * count > maxVolume * 4) {
+            return Result.error("That's " + box.volume() * count + " blocks - use fewer copies or a smaller selection.");
+        }
+        BlockGrid grid = SelectionOps.read(box, world);
+        Result r = Result.edit("stack", SelectionOps.stack(box, grid, unit, count, a.flag("a")),
+            List.of(String.format("&7Stacked &f%d &7cop%s.", count, count == 1 ? "y" : "ies")));
+        return a.flag("s") ? r.selecting(SelectionOps.stackBounds(box, unit, count)) : r;
+    }
+
+    private Result hollow(Request req, Args a, WorldView world) {
+        Box box = checkedSelection(req).clampY(world.minY(), world.maxY());
+        int thickness = a.intArg(1, "thickness", 1, 1, 64);
+        Pattern fill = a.word(2) != null ? Pattern.parse(a.word(2)) : null;
+        return Result.edit("hollow", SelectionOps.hollow(box, world, thickness, fill));
+    }
+
+    private Result overlay(Request req, Args a, WorldView world) {
+        Box box = checkedSelection(req);
+        return Result.edit("overlay", SelectionOps.overlay(box, world, pattern(a, 1), a.intArg(2, "depth", 1, 1, 64)));
+    }
+
+    private Result count(Request req, Args a, WorldView world) {
+        Box box = checkedSelection(req);
+        Set<String> want = ids(a, 1);
+        Map<String, Long> all = SelectionOps.distribution(box, world);
+        long n = 0;
+        for (String id : want) {
+            n += all.getOrDefault(id, 0L);
+        }
+        return Result.message(String.format("&f%,d &7of the &f%,d &7blocks in your selection are &f%s&7.", n, box.volume(), String.join(", ", want)));
+    }
+
+    private Result distr(Request req, WorldView world) {
+        Box box = checkedSelection(req);
+        Map<String, Long> all = SelectionOps.distribution(box, world);
+        long total = 0;
+        for (long v : all.values()) {
+            total += v;
+        }
+        List<Map.Entry<String, Long>> sorted = new ArrayList<>(all.entrySet());
+        sorted.sort((x, y) -> Long.compare(y.getValue(), x.getValue()));
+        List<String> lines = new ArrayList<>();
+        lines.add(String.format("&6Blocks in your selection &7(%,d total, %d kinds)", total, sorted.size()));
+        for (int i = 0; i < Math.min(12, sorted.size()); i++) {
+            Map.Entry<String, Long> e = sorted.get(i);
+            lines.add(String.format("&f%6.1f%% &7%,d &f%s", 100.0 * e.getValue() / Math.max(1, total), e.getValue(), e.getKey().replace("minecraft:", "")));
+        }
+        if (sorted.size() > 12) {
+            lines.add("&8...and " + (sorted.size() - 12) + " more");
+        }
+        return Result.message(lines);
+    }
+
+    private Result magic(Request req, Args a, WorldView world) {
+        if (req.target() == null) {
+            return Result.error("Look at a block to select everything connected to it.");
+        }
+        int limit = (int) Math.min(Integer.MAX_VALUE, Math.min(maxVolume, a.intArg(1, "limit", 200000, 1, Integer.MAX_VALUE)));
+        SelectionOps.Region region = SelectionOps.connected(req.target(), world, a.flag("a"), a.flag("d"), limit);
+        if (region == null) {
+            return Result.error("That's air - look at a block.");
+        }
+        Box b = region.box();
+        String what = a.flag("a") ? "connected blocks" : "connected " + Pattern.baseId(world.blockId(req.target()[0], req.target()[1], req.target()[2])).replace("minecraft:", "");
+        return Result.message(String.format("&aSelected &f%,d &a%s &7(%dx%dx%d)%s", region.count(), what,
+            b.maxX() - b.minX() + 1, b.maxY() - b.minY() + 1, b.maxZ() - b.minZ() + 1,
+            region.capped() ? " &e- stopped at the limit, raise it with limit=" : "")).selecting(b);
+    }
+
+    private Result resize(Request req, Args a, int sign, String verb, WorldView world) {
+        Box box = selectionBox(req);
+        if (a.lower(1).equals("vert") || a.lower(1).equals("vertical")) {
+            if (sign < 0) {
+                return Result.error("Use /sb contract <n> up|down to shrink vertically.");
+            }
+            Box full = new Box(box.minX(), world.minY(), box.minZ(), box.maxX(), world.maxY() - 1, box.maxZ());
+            return Result.message("&aSelection now spans the full height.").selecting(full);
+        }
+        int n = a.intArg(1, "n", 1, 1, 4096);
+        String dir = a.lower(2);
+        Box out;
+        if (dir.equals("all") || dir.equals("*")) {
+            out = new Box(box.minX() - n * sign, box.minY() - n * sign, box.minZ() - n * sign, box.maxX() + n * sign, box.maxY() + n * sign, box.maxZ() + n * sign);
+            if (out.minX() > out.maxX() || out.minY() > out.maxY() || out.minZ() > out.maxZ()) {
+                return Result.error("That would shrink the selection to nothing.");
+            }
+        } else {
+            int[] unit = Directions.unit(dir, req.yaw(), req.pitch());
+            if (unit == null) {
+                return Result.error("Directions: up, down, left, right, forward, back, north, south, east, west, all.");
+            }
+            out = SelectionOps.resize(box, unit, n * sign);
+        }
+        return Result.message(String.format("&a%s &7- selection is now &f%dx%dx%d &7(%,d blocks)", verb.equals("expand") ? "Expanded" : "Contracted",
+            out.maxX() - out.minX() + 1, out.maxY() - out.minY() + 1, out.maxZ() - out.minZ() + 1, out.volume())).selecting(out);
+    }
+
+    private Result shiftSelection(Request req, Args a) {
+        Box box = selectionBox(req);
+        int[] d = offset(req, a, 1, 1);
+        return Result.message(String.format("&aSelection shifted by &f%d %d %d&7 (blocks stay where they are - use /sb move to take them along).", d[0], d[1], d[2]))
+            .selecting(SelectionOps.shift(box, d[0], d[1], d[2]));
+    }
+
+    private Result size(Request req) {
+        Box b = selectionBox(req);
+        return Result.message(String.format("&7Selection &f%dx%dx%d &7(%,d blocks) from &f%d %d %d &7to &f%d %d %d",
+            b.maxX() - b.minX() + 1, b.maxY() - b.minY() + 1, b.maxZ() - b.minZ() + 1, b.volume(),
+            b.minX(), b.minY(), b.minZ(), b.maxX(), b.maxY(), b.maxZ()));
+    }
+
     private Result selection(Request req, String label, BoxEdit edit) {
         Box box = selectionBox(req);
         if (box.volume() > maxVolume) {
@@ -695,7 +868,7 @@ public final class Commands {
         int[] t = anchor(req);
         dev.syrkbuilder.core.edit.EditBuffer edits = dev.syrkbuilder.core.brush.Brushes.apply(settings, world, t[0], t[1], t[2], maxVolume);
         int stroke = a.intValue("stroke", 0, Integer.MIN_VALUE, Integer.MAX_VALUE);
-        return new Result(Result.Kind.EDIT, "brush " + type.id(), edits, stroke, List.of(), null, List.of());
+        return new Result(Result.Kind.EDIT, "brush " + type.id(), edits, stroke, List.of(), null, List.of(), null);
     }
 
     private Result terrain(Request req, Args a, WorldView world) {

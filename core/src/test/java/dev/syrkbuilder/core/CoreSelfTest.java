@@ -81,6 +81,15 @@ public final class CoreSelfTest {
         }
     }
 
+    static int topOf(BlockGrid g, int x, int z) {
+        for (int y = g.sizeY() - 1; y >= 0; y--) {
+            if (g.get(x, y, z) != null) {
+                return y;
+            }
+        }
+        return -1;
+    }
+
     static final class FlatWorld implements WorldView {
         final Map<Long, String> blocks = new HashMap<>();
         final int groundY;
@@ -581,6 +590,18 @@ public final class CoreSelfTest {
         }
         vox.write(b.array(), 0, b.position());
         Files.write(dir.resolve("m.vox"), vox.toByteArray());
+        java.awt.image.BufferedImage hm = new java.awt.image.BufferedImage(40, 20, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        for (int ix = 0; ix < 40; ix++) {
+            for (int iz = 0; iz < 20; iz++) {
+                int v = ix * 255 / 39;
+                hm.setRGB(ix, iz, v << 16 | v << 8 | v);
+            }
+        }
+        javax.imageio.ImageIO.write(hm, "png", dir.resolve("ramp.png").toFile());
+        BlockGrid hg = ModelImporter.importFile(dir.resolve("ramp.png"), new ModelImporter.Options(20, false, "all", 16));
+        check("heightmap keeps the aspect ratio", hg.sizeX() == 20 && hg.sizeZ() == 10 && hg.sizeY() == 17, hg.sizeX() + "x" + hg.sizeY() + "x" + hg.sizeZ());
+        check("heightmap: dark is low, bright is high", hg.get(0, 1, 5) == null && hg.get(19, 16, 5) != null && hg.get(0, 0, 5) != null, hg.get(19, 16, 5));
+        check("heightmap has grass on gentle slopes", "minecraft:grass_block".equals(hg.get(5, topOf(hg, 5, 5), 5)), hg.get(5, topOf(hg, 5, 5), 5));
         BlockGrid vg = ModelImporter.importFile(dir.resolve("m.vox"), new ModelImporter.Options(64, false, "concrete"));
         check("vox axes (z-up -> y-up)", vg.sizeX() == 2 && vg.sizeY() == 4 && vg.sizeZ() == 3, vg.sizeX() + "x" + vg.sizeY() + "x" + vg.sizeZ());
         check("vox voxel placed + coloured", "minecraft:blue_concrete".equals(vg.get(1, 3, 0)) && vg.nonEmpty() == 1, vg.palette());
@@ -739,6 +760,47 @@ public final class CoreSelfTest {
         quietFrom = msgs.size();
         send.accept("set bogus_block -q", sel.apply(new int[]{5, 71, 5}, new int[]{5, 71, 5}));
         check("quiet edit still reports errors", msgs.subList(quietFrom, msgs.size()).stream().anyMatch(m -> m.contains("Unknown block")), msgs.subList(quietFrom, msgs.size()));
+        java.util.function.Supplier<String> lastSelection = () -> {
+            for (int i = msgs.size() - 1; i >= 0; i--) {
+                Protocol.Data d = Protocol.dataLine(msgs.get(i));
+                if (d != null && d.kind().equals("selection")) {
+                    return d.text();
+                }
+            }
+            return null;
+        };
+        world.blocks.put(FlatWorld.key(500, 70, 500), "minecraft:gold_block");
+        world.blocks.put(FlatWorld.key(501, 70, 500), "minecraft:iron_block");
+        send.accept("move 3 east", sel.apply(new int[]{500, 70, 500}, new int[]{501, 70, 500}));
+        check("move shifts the blocks", world.blockId(500, 70, 500).endsWith("air") && world.blockState(503, 70, 500).equals("minecraft:gold_block")
+            && world.blockState(504, 70, 500).equals("minecraft:iron_block"), world.blockId(503, 70, 500));
+        check("move takes the selection along", "503 70 500 504 70 500".equals(lastSelection.get()), lastSelection.get());
+        send.accept("move 1 0 0", sel.apply(new int[]{503, 70, 500}, new int[]{504, 70, 500}));
+        check("move by an overlapping offset", world.blockId(503, 70, 500).endsWith("air") && world.blockState(504, 70, 500).equals("minecraft:gold_block")
+            && world.blockState(505, 70, 500).equals("minecraft:iron_block"), world.blockId(504, 70, 500) + " " + world.blockId(505, 70, 500));
+        send.accept("stack 2 up", sel.apply(new int[]{504, 70, 500}, new int[]{505, 70, 500}));
+        check("stack repeats the selection", world.blockState(504, 71, 500).equals("minecraft:gold_block") && world.blockState(505, 72, 500).equals("minecraft:iron_block")
+            && world.blockId(504, 73, 500).endsWith("air"), world.blockId(504, 72, 500));
+        send.accept("set stone", sel.apply(new int[]{520, 70, 520}, new int[]{524, 74, 524}));
+        send.accept("count stone", sel.apply(new int[]{520, 70, 520}, new int[]{524, 74, 524}));
+        check("count reports matching blocks", msgs.get(msgs.size() - 1).contains("125"), msgs.get(msgs.size() - 1));
+        send.accept("hollow", sel.apply(new int[]{520, 70, 520}, new int[]{524, 74, 524}));
+        check("hollow empties the inside", world.blockId(522, 72, 522).endsWith("air") && world.blockId(521, 71, 521).endsWith("air")
+            && world.blockId(520, 72, 522).equals("minecraft:stone") && world.blockId(522, 74, 522).equals("minecraft:stone"), world.blockId(522, 72, 522));
+        send.accept("distr", sel.apply(new int[]{520, 70, 520}, new int[]{524, 74, 524}));
+        check("distr lists block counts", msgs.stream().anyMatch(m -> m.contains("98") && m.contains("stone")), msgs.subList(Math.max(0, msgs.size() - 4), msgs.size()));
+        send.accept("select", look.apply(new int[]{520, 70, 520}));
+        check("magic select picks the connected build", "520 70 520 524 74 524".equals(lastSelection.get()), lastSelection.get());
+        send.accept("expand 2 up", sel.apply(new int[]{520, 70, 520}, new int[]{524, 74, 524}));
+        check("expand grows the selection", "520 70 520 524 76 524".equals(lastSelection.get()), lastSelection.get());
+        send.accept("contract 1 all", sel.apply(new int[]{520, 70, 520}, new int[]{524, 74, 524}));
+        check("contract all shrinks every side", "521 71 521 523 73 523".equals(lastSelection.get()), lastSelection.get());
+        send.accept("overlay snow_block", sel.apply(new int[]{540, 60, 540}, new int[]{541, 80, 541}));
+        check("overlay covers the top", world.blockState(540, 65, 540).equals("minecraft:snow_block") && world.blockState(541, 65, 541).equals("minecraft:snow_block")
+            && world.blockId(540, 66, 540).endsWith("air"), world.blockId(540, 65, 540));
+        send.accept("naturalize", sel.apply(new int[]{550, 55, 550}, new int[]{550, 64, 550}));
+        check("naturalize adds grass and dirt", world.blockId(550, 64, 550).equals("minecraft:grass_block") && world.blockId(550, 62, 550).equals("minecraft:dirt")
+            && world.blockId(550, 58, 550).equals("minecraft:stone"), world.blockId(550, 64, 550));
         send.accept("script maze", sel.apply(new int[]{20, 64, 20}, new int[]{34, 64, 34}));
         check("engine runs bundled script", world.blocks.containsValue("minecraft:oak_leaves[persistent=true]"), msgs.subList(Math.max(0, msgs.size() - 3), msgs.size()));
         msgs.clear();

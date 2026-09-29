@@ -47,6 +47,9 @@ final class EditorScreen extends Screen {
     private static final int BRUSHES = 2;
     private static final String[] SHAPES = {"sphere", "ellipsoid", "dome", "cyl", "cone", "pyramid", "circle", "disc", "torus", "helix"};
     private static final String[] SEL_ACTIONS = {"set", "walls", "outline", "replace", "line"};
+    private static final String[] DIRECTIONS = {"look", "up", "down", "north", "south", "east", "west", "all"};
+    private static String selAmount = "1";
+    private static int selDirection;
     private static final String[] ROTATIONS = {"0°", "90°", "180°", "270°"};
 
     private static int tool;
@@ -84,6 +87,7 @@ final class EditorScreen extends Screen {
     private static String templateName = "";
     private static int modelIndex;
     private static String modelSize = "48";
+    private static String heightmapHeight = "";
     private static int palette;
     private static boolean solid;
     private static int modelRotation;
@@ -632,6 +636,33 @@ final class EditorScreen extends Screen {
             String a = SEL_ACTIONS[selAction];
             run(replace ? "replace " + blocks(selFrom) + " " + blocks(selBlocks) : a + " " + blocks(selBlocks));
         });
+        p.section("Transform");
+        p.field("Amount", selAmount, "1", v -> selAmount = v);
+        p.chips(DIRECTIONS, null, selDirection, 4, v -> selDirection = v);
+        p.buttons("Move", () -> run("move " + amount() + dirWord(false)), "Stack", () -> run("stack " + amount() + dirWord(false)));
+        p.buttons("Expand", () -> run("expand " + amount() + dirWord(true)), "Contract", () -> run("contract " + amount() + dirWord(true)));
+        p.button("Shift selection only", false, () -> run("shift " + amount() + dirWord(false)));
+        p.note("§8Look = the way you face. Move takes the selection along; Stack repeats it next to itself.");
+        p.section("Edit");
+        p.buttons("Hollow", () -> run("hollow"), "Naturalize", () -> run("naturalize"));
+        p.button("Overlay with blocks above", false, () -> run("overlay " + blocks(selBlocks)));
+        p.buttons("Count blocks", () -> run("count " + blocks(selBlocks)), "Block list", () -> run("distr"));
+        p.section("Magic select");
+        p.buttons("Same block", () -> run("select"), "Whole build", () -> run("select -a"));
+        p.note("§8Selects everything connected to the block you aim at.");
+    }
+
+    private static String amount() {
+        String n = selAmount.trim();
+        return n.matches("\\d+") && !n.equals("0") ? n : "1";
+    }
+
+    private static String dirWord(boolean allowAll) {
+        String d = DIRECTIONS[selDirection];
+        if (d.equals("look") || d.equals("all") && !allowAll) {
+            return "";
+        }
+        return " " + d;
     }
 
     private void clipboard(Panel p) {
@@ -663,22 +694,35 @@ final class EditorScreen extends Screen {
     }
 
     private void importPanel(Panel p) {
-        List<String> models = LocalFiles.list(LocalFiles.models(), SyrkBuilderClient.MODEL_TYPES);
+        List<String> models = SyrkBuilderClient.importables();
         if (models.isEmpty()) {
-            p.note("No models yet. Put .obj (with its .mtl and textures), .glb or .vox files in .minecraft/syrkbuilder/models");
+            p.note("No models yet. Put .obj (with its .mtl and textures), .glb or .vox files in .minecraft/syrkbuilder/models,");
+            p.note("or greyscale .png/.jpg heightmaps in .minecraft/syrkbuilder/heightmaps");
             return;
         }
         modelIndex = Math.min(modelIndex, models.size() - 1);
-        p.list(models, modelIndex, v -> modelIndex = v);
-        p.section("Options");
-        p.field("Size", modelSize, "2-512", v -> modelSize = v);
-        String[] palettes = BlockPalette.NAMES.toArray(new String[0]);
-        p.chips(palettes, null, palette, 3, v -> palette = v);
+        p.list(models, modelIndex, v -> {
+            modelIndex = v;
+            rebuildWidgets();
+        });
+        String chosen = models.get(modelIndex);
+        boolean image = SyrkBuilderClient.isImage(chosen);
+        p.section(image ? "Heightmap" : "Options");
+        p.field("Size", modelSize, image ? "width, e.g. 128" : "2-512", v -> modelSize = v);
+        if (image) {
+            p.field("Height", heightmapHeight, "auto", v -> heightmapHeight = v);
+            p.note("§8Brighter = higher. Grass on top, dirt, stone below, snow on the peaks.");
+        } else {
+            String[] palettes = BlockPalette.NAMES.toArray(new String[0]);
+            p.chips(palettes, null, palette, 3, v -> palette = v);
+            p.toggle("Solid", () -> solid, v -> solid = v, "Fill the inside, not just the shell");
+        }
         p.segments("Rotate", ROTATIONS, modelRotation, v -> modelRotation = v);
-        p.toggle("Solid", () -> solid, v -> solid = v, "Fill the inside, not just the shell");
         p.gap(4);
-        place(p, "Import at target", "import " + models.get(modelIndex), () -> SyrkBuilderClient.importModel(Feedback.chat(),
-            models.get(modelIndex) + " size=" + num(modelSize) + " palette=" + palettes[palette] + (solid ? " -s" : "")
+        String[] palettes = BlockPalette.NAMES.toArray(new String[0]);
+        place(p, "Import at target", "import " + chosen, () -> SyrkBuilderClient.importModel(Feedback.chat(),
+            chosen + (modelSize.isBlank() ? "" : " size=" + num(modelSize))
+                + (image ? (heightmapHeight.isBlank() ? "" : " height=" + num(heightmapHeight)) : " palette=" + palettes[palette] + (solid ? " -s" : ""))
                 + (modelRotation > 0 ? " rotate=" + modelRotation * 90 : "")));
     }
 

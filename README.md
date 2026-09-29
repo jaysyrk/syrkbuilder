@@ -32,9 +32,9 @@ current tool. Middle-click copies the block you aim at into the tool's Blocks fi
 | Fill | hole (fills to the brim), connected (paint bucket), room (enclosed 3D) |
 | Trees | oak, birch, spruce, pine, jungle, dark oak, acacia, cherry, willow, palm, dead, swamp, and a forest brush |
 | Paths | drag or click points, then build a road, wall, tunnel, river, bridge or line |
-| Selection | set, walls, outline, replace, line |
+| Selection | set, walls, outline, replace, line, move, stack, hollow, overlay, naturalize, count, magic select, expand / contract / shift |
 | Clipboard | copy, paste, rotate, mirror, templates, export to `.schem` / `.litematic` |
-| Import | OBJ (with MTL textures), glTF / GLB, MagicaVoxel `.vox` |
+| Import | OBJ (with MTL textures), glTF / GLB, MagicaVoxel `.vox`, and `.png` / `.jpg` heightmaps as terrain |
 | Scripts | run JavaScript build scripts |
 | History | the branching timeline; click to jump, shift+click to restore your selection |
 
@@ -65,6 +65,9 @@ Everything in the editor is also a command. `/sb help` lists them all and every 
 /sb template save|export|paste|load <name>      /sb import <file> [size=64] [palette=]
 /sb script <file> [args]                        /sb mask <blocks|!blocks|off>, /sb symmetry <x|z|xz|off>
 /sb gradient <from> <to> [steps]                /sb nudge, /sb turn, /sb cancel, /sb confirm
+/sb move [n] [dir], /sb stack [n] [dir]         /sb hollow [thickness], /sb overlay <blocks>, /sb naturalize
+/sb select [-a] (magic select)                  /sb expand|contract|shift <n> [dir|vert|all], /sb size
+/sb count <blocks>, /sb distr                   /sb settings
 /sb undo, /sb redo, /sb history, /sb goto <#id|name>, /sb checkpoint <name>, /sb restore <#id|name>
 /sb noclip
 ```
@@ -76,6 +79,7 @@ The golden axe is a selection wand: left-click sets pos1, right-click sets pos2.
 In singleplayer, everything lives in `.minecraft/syrkbuilder/`:
 
 - `models/` for models to import
+- `heightmaps/` for greyscale images to import as terrain
 - `scripts/` for build scripts (four examples are added on first run)
 - `templates/` for saved and exported builds; `.minecraft/schematics` and
   `.minecraft/config/worldedit/schematics` are read too

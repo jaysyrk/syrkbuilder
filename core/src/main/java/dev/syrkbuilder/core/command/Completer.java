@@ -66,12 +66,25 @@ public final class Completer {
         Map.entry("symmetry", spec(List.of(Kind.SYMMETRY))),
         Map.entry("gradient", new Spec(List.of(Kind.BLOCKS, Kind.BLOCKS, Kind.NUMBER), List.of("3", "5", "8"), List.of("palette="), List.of())),
         Map.entry("import", new Spec(List.of(Kind.MODEL), List.of(), List.of("size=", "palette=", "rotate=", "swap=", "up="), List.of("-s", "-a", "-flip"))),
+        Map.entry("move", new Spec(List.of(Kind.NUMBER, Kind.NUDGE), List.of("1", "5", "10"), List.of("leave="), List.of("-a"))),
+        Map.entry("stack", new Spec(List.of(Kind.NUMBER, Kind.NUDGE), List.of("1", "3", "5"), List.of(), List.of("-a", "-s"))),
+        Map.entry("hollow", new Spec(List.of(Kind.NUMBER, Kind.BLOCKS), List.of("1", "2", "3"), List.of(), List.of())),
+        Map.entry("overlay", new Spec(List.of(Kind.BLOCKS, Kind.NUMBER), List.of("1", "2", "3"), List.of(), List.of())),
+        Map.entry("naturalize", spec(List.of())),
+        Map.entry("count", spec(List.of(Kind.BLOCKS))),
+        Map.entry("distr", spec(List.of())),
+        Map.entry("select", new Spec(List.of(Kind.NUMBER), List.of("50000", "200000"), List.of(), List.of("-a", "-d"))),
+        Map.entry("expand", new Spec(List.of(Kind.NUMBER, Kind.NUDGE), List.of("1", "5", "10"), List.of(), List.of())),
+        Map.entry("contract", new Spec(List.of(Kind.NUMBER, Kind.NUDGE), List.of("1", "5", "10"), List.of(), List.of())),
+        Map.entry("shift", new Spec(List.of(Kind.NUMBER, Kind.NUDGE), List.of("1", "5", "10"), List.of(), List.of())),
+        Map.entry("size", spec(List.of())),
         Map.entry("script", new Spec(List.of(Kind.SCRIPT, Kind.FREE, Kind.FREE, Kind.FREE), List.of(), List.of(), List.of())));
 
     public static final List<String> COMMANDS = List.of("help", "set", "replace", "walls", "outline", "line", "sphere", "ellipsoid",
         "dome", "cyl", "circle", "disc", "cone", "pyramid", "torus", "helix", "terrain", "copy", "paste", "rotate", "flip",
         "template", "marker", "undo", "redo", "history", "goto", "checkpoint", "restore", "mask", "symmetry", "gradient",
-        "tree", "path", "fill", "nudge", "turn", "cancel", "confirm", "preview");
+        "tree", "path", "fill", "nudge", "turn", "cancel", "confirm", "preview", "move", "stack", "hollow", "overlay",
+        "naturalize", "count", "distr", "select", "expand", "contract", "shift", "size");
 
     private static Spec spec(List<Kind> args) {
         return new Spec(args, List.of(), List.of(), List.of());

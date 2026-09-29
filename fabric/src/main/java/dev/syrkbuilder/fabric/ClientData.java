@@ -74,6 +74,21 @@ final class ClientData {
                 }
                 path = points;
             }
+            case "selection" -> {
+                String[] p = d.text().trim().split(" ");
+                if (p.length == 6) {
+                    try {
+                        int[] v = new int[6];
+                        for (int i = 0; i < 6; i++) {
+                            v[i] = Integer.parseInt(p[i]);
+                        }
+                        Selection.setPos1(new net.minecraft.core.BlockPos(v[0], v[1], v[2]));
+                        Selection.setPos2(new net.minecraft.core.BlockPos(v[3], v[4], v[5]));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+                return;
+            }
             default -> {
                 return;
             }
