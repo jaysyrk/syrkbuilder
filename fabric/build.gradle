@@ -33,3 +33,11 @@ fabricApi {
         eula = true
     }
 }
+
+loom {
+    runs {
+        clientGameTest {
+            vmArg '-Dfabric.client.gametest.disableNetworkSynchronizer=true'
+        }
+    }
+}
