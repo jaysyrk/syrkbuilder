@@ -67,7 +67,8 @@ Everything in the editor is also a command. `/sb help` lists them all and every 
 /sb gradient <from> <to> [steps]                /sb nudge, /sb turn, /sb cancel, /sb confirm
 /sb move [n] [dir], /sb stack [n] [dir]         /sb hollow [thickness], /sb overlay <blocks>, /sb naturalize
 /sb select [-a] (magic select)                  /sb expand|contract|shift <n> [dir|vert|all], /sb size
-/sb count <blocks>, /sb distr                   /sb settings
+/sb count <blocks>, /sb distr                   /sb cut, /sb smooth [passes]
+/sb drain|snow|thaw|green [radius]              /sb settings
 /sb undo, /sb redo, /sb history, /sb goto <#id|name>, /sb checkpoint <name>, /sb restore <#id|name>
 /sb noclip
 ```

@@ -49,6 +49,7 @@ public final class Commands {
         "&ePaths&7: path add (repeat), then path <road|wall|tunnel|river|bridge|line> [width] [blocks]; path undo|clear",
         "&ePreview&7: the last placement stays live - nudge <dx dy dz|up|left|forward..> [n], turn [deg], cancel, confirm; preview on|off",
         "&eSelection edits&7: move [n] [dir], stack [n] [dir], hollow [thickness], overlay <blocks> [depth], naturalize",
+        "&eMore&7: cut, smooth [passes] (selection), drain|snow|thaw|green [radius] (around where you look)",
         "&eSelection tools&7: select [-a] [-d] (magic select what you look at), expand|contract|shift <n> [dir|vert], size, count <blocks>, distr",
         "&eClipboard&7: copy, paste [rotate=90] [flip] [-a] [swap=stone:andesite], rotate <deg>, flip",
         "&eTemplates&7: template save|export|paste|load|list|info|delete <name> (reads .schem/.litematic too), marker <name>|list|remove|clear",
@@ -134,6 +135,12 @@ public final class Commands {
                 case "contract" -> resize(req, a, -1, "contract", world);
                 case "shift" -> shiftSelection(req, a);
                 case "size" -> size(req);
+                case "cut" -> cut(req, world, session);
+                case "smooth" -> smoothSelection(req, a, world);
+                case "drain" -> around(req, a, "drain", 10, (c, r) -> NatureOps.drain(c, r, world));
+                case "snow" -> around(req, a, "snow", 12, (c, r) -> NatureOps.snow(c, r, world));
+                case "thaw" -> around(req, a, "thaw", 12, (c, r) -> NatureOps.thaw(c, r, world));
+                case "green" -> around(req, a, "green", 12, (c, r) -> NatureOps.green(c, r, world));
                 default -> Result.error("Unknown command '" + cmd + "'. Try /sb help");
             };
         }
@@ -594,6 +601,34 @@ public final class Commands {
         int[] d = offset(req, a, 1, 1);
         return Result.message(String.format("&aSelection shifted by &f%d %d %d&7 (blocks stay where they are - use /sb move to take them along).", d[0], d[1], d[2]))
             .selecting(SelectionOps.shift(box, d[0], d[1], d[2]));
+    }
+
+    private interface AroundEdit {
+        dev.syrkbuilder.core.edit.CellStream make(int[] center, int radius);
+    }
+
+    private Result around(Request req, Args a, String label, int def, AroundEdit edit) {
+        int radius = a.intArg(1, "radius", def, 1, 64);
+        dev.syrkbuilder.core.edit.CellStream stream = edit.make(anchor(req), radius);
+        if (stream.size() == 0) {
+            return Result.message("&7Nothing to " + label + " within " + radius + " blocks of where you look.");
+        }
+        return Result.edit(label, stream);
+    }
+
+    private Result cut(Request req, WorldView world, Session session) {
+        Box box = checkedSelection(req);
+        Result copied = copy(req, world, session);
+        if (copied.kind() == Result.Kind.ERROR) {
+            return copied;
+        }
+        return Result.edit("cut", SelectionStreams.set(box.clampY(world.minY(), world.maxY()), Pattern.of(SelectionOps.AIR)),
+            List.of(copied.lines().get(0).replace("Copied", "Cut")));
+    }
+
+    private Result smoothSelection(Request req, Args a, WorldView world) {
+        Box box = checkedSelection(req);
+        return Result.edit("smooth", NatureOps.smooth(box, world, a.intArg(1, "passes", 3, 1, 20)));
     }
 
     private Result size(Request req) {

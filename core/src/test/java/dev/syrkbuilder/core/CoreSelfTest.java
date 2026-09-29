@@ -801,6 +801,29 @@ public final class CoreSelfTest {
         send.accept("naturalize", sel.apply(new int[]{550, 55, 550}, new int[]{550, 64, 550}));
         check("naturalize adds grass and dirt", world.blockId(550, 64, 550).equals("minecraft:grass_block") && world.blockId(550, 62, 550).equals("minecraft:dirt")
             && world.blockId(550, 58, 550).equals("minecraft:stone"), world.blockId(550, 64, 550));
+        world.blocks.put(FlatWorld.key(600, 70, 600), "minecraft:gold_block");
+        send.accept("cut", sel.apply(new int[]{600, 70, 600}, new int[]{600, 70, 600}));
+        check("cut clears and fills the clipboard", world.blockId(600, 70, 600).endsWith("air") && msgs.stream().anyMatch(m -> m.contains("Cut")), msgs.get(msgs.size() - 1));
+        send.accept("paste", look.apply(new int[]{602, 64, 600}));
+        check("cut blocks paste back", world.blockState(602, 65, 600).equals("minecraft:gold_block"), world.blockId(602, 65, 600));
+        for (int y = 65; y <= 75; y++) {
+            world.blocks.put(FlatWorld.key(610, y, 610), "minecraft:stone");
+        }
+        send.accept("smooth 2", sel.apply(new int[]{605, 55, 605}, new int[]{615, 80, 615}));
+        check("smooth flattens a spike", world.blockId(610, 75, 610).endsWith("air") && world.blockId(610, 64, 610).equals("minecraft:stone"), world.blockId(610, 70, 610));
+        for (int x = 620; x <= 623; x++) {
+            world.blocks.put(FlatWorld.key(x, 65, 620), "minecraft:water");
+        }
+        send.accept("drain 6", look.apply(new int[]{621, 64, 620}));
+        check("drain removes connected water", world.blockId(620, 65, 620).endsWith("air") && world.blockId(623, 65, 620).endsWith("air"), world.blockId(620, 65, 620));
+        send.accept("snow 3", look.apply(new int[]{630, 64, 630}));
+        check("snow covers the ground", world.blockId(630, 65, 630).equals("minecraft:snow") && world.blockId(633, 65, 630).equals("minecraft:snow")
+            && world.blockId(633, 65, 633).endsWith("air"), world.blockId(630, 65, 630));
+        send.accept("thaw 3", look.apply(new int[]{630, 64, 630}));
+        check("thaw removes the snow", world.blockId(630, 65, 630).endsWith("air"), world.blockId(630, 65, 630));
+        world.blocks.put(FlatWorld.key(640, 64, 640), "minecraft:dirt");
+        send.accept("green 2", look.apply(new int[]{640, 64, 640}));
+        check("green turns dirt to grass", world.blockId(640, 64, 640).equals("minecraft:grass_block"), world.blockId(640, 64, 640));
         send.accept("script maze", sel.apply(new int[]{20, 64, 20}, new int[]{34, 64, 34}));
         check("engine runs bundled script", world.blocks.containsValue("minecraft:oak_leaves[persistent=true]"), msgs.subList(Math.max(0, msgs.size() - 3), msgs.size()));
         msgs.clear();
