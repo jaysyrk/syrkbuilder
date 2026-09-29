@@ -41,3 +41,31 @@ jobs:
             tag="v$version+$mc"
           fi
           gh release create "$tag" "$jar" --target "$GITHUB_SHA" --title "SyrkBuilder $version for Minecraft $mc" --notes-file notes.md
+
+      - name: Upload to Modrinth
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+        run: |
+          if [ -z "$MODRINTH_TOKEN" ] || [ -z "$MODRINTH_PROJECT_ID" ]; then
+            echo "::notice::Skipped Modrinth: set the MODRINTH_TOKEN secret and the MODRINTH_PROJECT_ID variable to publish there too"
+            exit 0
+          fi
+          version=$(grep '^mod_version=' gradle.properties | cut -d= -f2)
+          mc=$(grep '^minecraft_version=' gradle.properties | cut -d= -f2)
+          jq -n \
+            --arg project "$MODRINTH_PROJECT_ID" \
+            --arg name "SyrkBuilder $version for Minecraft $mc" \
+            --arg number "$version+$mc" \
+            --arg mc "$mc" \
+            --arg fabric_api P7dR8mSH \
+            --rawfile changelog notes.md \
+            '{project_id: $project, name: $name, version_number: $number, changelog: $changelog,
+              game_versions: [$mc], loaders: ["fabric"], version_type: "release", featured: false,
+              dependencies: [{project_id: $fabric_api, dependency_type: "required"}],
+              file_parts: ["file"], primary_file: "file"}' > modrinth.json
+          curl --fail-with-body -sS https://api.modrinth.com/v2/version \
+            -H "Authorization: $MODRINTH_TOKEN" \
+            -H "User-Agent: jaysyrk/syrkbuilder release workflow" \
+            -F "data=<modrinth.json;type=application/json" \
+            -F "file=@fabric/build/libs/syrkbuilder-fabric-$version+$mc.jar;type=application/java-archive"
