@@ -26,7 +26,7 @@ current tool. Middle-click copies the block you aim at into the tool's Blocks fi
 
 | Tool | What it does |
 |---|---|
-| Shapes | sphere, ellipsoid, dome, cylinder, cone, pyramid, circle, disc, torus, helix |
+| Shapes | sphere, ellipsoid, dome, cylinder, cone, pyramid, circle, disc, torus, helix, text, arch |
 | Terrain | 8 generators with radius, height, erosion, roughness, peaks, style and seed |
 | Brushes | 25 brushes in three groups: blocks, sculpting and terrain |
 | Fill | hole (fills to the brim), connected (paint bucket), room (enclosed 3D) |
@@ -68,7 +68,9 @@ Everything in the editor is also a command. `/sb help` lists them all and every 
 /sb move [n] [dir], /sb stack [n] [dir]         /sb hollow [thickness], /sb overlay <blocks>, /sb naturalize
 /sb select [-a] (magic select)                  /sb expand|contract|shift <n> [dir|vert|all], /sb size
 /sb count <blocks>, /sb distr                   /sb cut, /sb smooth [passes]
-/sb drain|snow|thaw|green [radius]              /sb settings
+/sb drain|snow|thaw|green [radius]              /sb text <blocks> <words> [size=] [-f]
+/sb arch <blocks> <width> <height>              /sb replacenear <radius> <from> <to>
+/sb settings
 /sb undo, /sb redo, /sb history, /sb goto <#id|name>, /sb checkpoint <name>, /sb restore <#id|name>
 /sb noclip
 ```
