@@ -48,11 +48,20 @@ jobs:
         run: sudo apt-get update -q && sudo apt-get install -y -q xvfb mesa-utils
 
       - name: Run the game with the mod
-        env:
-          LP_NUM_THREADS: 2
         run: |
           chmod +x gradlew
-          xvfb-run -a -s "-screen 0 1920x1080x24" ./gradlew :fabric:runClientGameTest
+          for attempt in 1 2 3; do
+            if xvfb-run -a -s "-screen 0 1920x1080x24" ./gradlew :fabric:runClientGameTest; then
+              exit 0
+            fi
+            report=$(find fabric -name 'syrkbuilder-test-report.txt' | head -1)
+            if [ -z "$report" ] || ! grep -q "Timeout loading world" "$report"; then
+              exit 1
+            fi
+            echo "World didn't finish loading in time (attempt $attempt), starting the game again"
+            find fabric -name 'syrkbuilder-test-report.txt' -delete
+          done
+          exit 1
 
       - name: Publish screenshots and report
         if: always()
