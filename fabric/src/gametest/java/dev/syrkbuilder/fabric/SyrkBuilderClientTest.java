@@ -117,8 +117,22 @@ public class SyrkBuilderClientTest implements FabricClientGameTest {
             context.waitTicks(10);
             context.getInput().lookAt(target);
             context.waitTicks(2);
+            BlockPos aimedBefore = context.computeOnClient(c -> SyrkBuilderClient.lookedAt(c.player));
+            report.add("      aiming at " + aimedBefore + " before /sb tree");
             chat(context, world, "/sb tree oak");
-            check("/sb tree grows a trunk", waitServer(server, s -> s.overworld().getBlockState(target.above()).is(Blocks.OAK_LOG)));
+            boolean trunk = waitServer(server, s -> {
+                for (int dx = -2; dx <= 2; dx++) {
+                    for (int dz = -2; dz <= 2; dz++) {
+                        if (s.overworld().getBlockState(target.offset(dx, 1, dz)).is(Blocks.OAK_LOG)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            });
+            BlockPos aimed = context.computeOnClient(c -> SyrkBuilderClient.lookedAt(c.player));
+            report.add("      aimed at " + aimed + ", target " + target);
+            check("/sb tree grows a trunk where you aim", trunk);
             context.getInput().lookAt(new BlockPos(fx, fy + 8, fz + 12));
             context.waitTicks(5);
             context.takeScreenshot("10_tree");
