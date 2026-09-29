@@ -137,8 +137,9 @@ public final class Engine<W, B> {
     private void handle(UUID player, W world, Request request, Consumer<String> reply) {
         HistoryTree<B> tree = history(player, world);
         if (tree == null) {
+            Request queued = request;
             waitingForHistory.computeIfAbsent(key(player, world), k -> new java.util.ArrayList<>())
-                .add(() -> handle(player, world, request, reply));
+                .add(() -> handle(player, world, queued, reply));
             return;
         }
         String key = key(player, world);
