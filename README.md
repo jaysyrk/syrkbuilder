@@ -38,7 +38,7 @@ current tool. Middle-click copies the block you aim at into the tool's Blocks fi
 |---|---|
 | Shapes | sphere, ellipsoid, dome, cylinder, cone, pyramid, circle, disc, torus, helix, text, arch |
 | Terrain | 8 generators with radius, height, erosion, roughness, peaks, style and seed; snow, thaw, green, drain; biome painting |
-| Brushes | 26 brushes in three groups: blocks (including a clipboard stamp), sculpting and terrain |
+| Brushes | 30 brushes in three groups: blocks (including a clipboard stamp, boulders and cliffs), sculpting and terrain (including a noise terrain generator and erosion) |
 | Fill | hole (fills to the brim), connected (paint bucket), room (enclosed 3D) |
 | Trees | oak, birch, spruce, pine, jungle, dark oak, acacia, cherry, willow, palm, dead, swamp, and a forest brush |
 | Paths | drag or click points, then build a road, wall, tunnel, river, bridge or line |
@@ -62,6 +62,26 @@ palette, or build a gradient between two colours. Blocks can be mixes (`60%stone
 
 Brushes take `rx=`, `ry=` and `rz=` to give them their own size on each axis, e.g. `/sb brush sphere 8 stone ry=2`
 paints a flat disc. In the editor, turn on Stretch per axis.
+
+### Noise terrain, masks, erosion and rocks
+
+- `/sb brush terragen 20 strength=24 noise=ridged` grows terrain from noise around the height you aim at. `noise=` is
+  `simplex` (even relief), `fractal` (hills with fine detail), `billowy` (rounded lumps, creased valleys) or `ridged`
+  (sharp crests). `strength=` is the height in blocks, `scale=` the feature size, `octaves=` how much fine detail, and
+  `-n` adds extra small bumps. Drag it for a long range
+- `preset=` sets all of that at once and gives the new ground matching surface blocks: `alpine`, `rolling`, `dunes`,
+  `mesa`, `islands` or `craggy`, e.g. `/sb brush terragen 30 preset=alpine`. `style=` picks other surface blocks
+  (`alpine`, `grassy`, `desert`, `mesa`, `volcanic`, `rocky`, `snowy`)
+- `/sb brush erode 20 strength=0.5` runs water and slope erosion over what is there: gullies, loose scree and softened
+  peaks without flattening them
+- `/sb brush boulder 4 stone,andesite ry=3` sets a lumpy rock into the ground (`strength=` is how rough, `rx= ry= rz=`
+  its size). `/sb brush cliff 8 stone,andesite,granite depth=3` stacks those blocks as strata layers on steep faces and
+  juts out ledges (`depth=` is the layer height, `strength=` how many ledges)
+- Noise masks make any edit land only in organic patches. `/sb mask fractal:8:0.4` is fractal patches 8 blocks across
+  covering 40%, `cell:6:0.5` fills half of the voronoi cells, `voronoi:8:0.15` and `crack:6:0.12` are cell borders and
+  cracks, `ygradient:60:90` thins out from y=60 to y=90, and `!` flips any of them. Add `:3d` for patterns that change
+  with height (they are the same up a column by default). Combine with blocks, e.g. `/sb mask stone fractal:8:0.4`, and
+  add `seed=` to repeat a pattern. `/sb mask off` clears both
 
 ### Keys
 
@@ -90,7 +110,7 @@ Everything in the editor is also a command. `/sb help` lists them all and every 
 /sb text <blocks> <words> [size=] [-f]          /sb arch <blocks> <width> <height>
 /sb biome <biome> [radius] [-s]                 /sb template save|export|paste|load <name>
 /sb import <file> [size=] [height=]             /sb script <file> [args]
-/sb mask <blocks|!blocks|off>                   /sb symmetry <x|z|xz|off>
+/sb mask <blocks|!blocks|fractal:..|off>          /sb symmetry <x|z|xz|off>
 /sb gradient <from> <to> [steps]                /sb nudge, /sb turn, /sb cancel, /sb confirm
 /sb undo, /sb redo, /sb history, /sb goto <#id|name>, /sb checkpoint <name>, /sb restore <#id|name>
 /sb noclip, /sb settings

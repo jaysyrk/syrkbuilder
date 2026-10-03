@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Terragen brush grows terrain from noise at the height you aim: `/sb brush terragen 20 noise=simplex|fractal|billowy|ridged strength= scale= octaves=`, `-n` for extra fine detail
+- Terragen presets set the noise, size and surface blocks in one go: `preset=alpine|rolling|dunes|mesa|islands|craggy`, or pick surface blocks with `style=`
+- Erode brush: water and slope erosion that carves gullies and softens peaks
+- Boulder brush: lumpy rocks set into the ground. Cliff brush: strata layers and ledges on steep faces
+- Noise masks: `/sb mask fractal:8:0.4`, `cell`, `voronoi`, `crack`, `ygradient:60:90`, `!` to invert, `:3d` for patterns that change with height, combinable with block masks. They apply to every edit
+- Terrain brushes now see mountains taller than twice their radius instead of treating the cut-off height as the ground
 - Brushes take `seed=` to repeat the exact same random result, e.g. `/sb brush roughen 5 seed=7`
 - Opening the editor with a key no longer puts the cursor in a text box first, which could swallow F7 and the tool shortcuts
 
