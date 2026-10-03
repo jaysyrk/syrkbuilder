@@ -112,6 +112,11 @@ public final class Engine<W, B> {
     }
 
     public void receive(UUID player, W world, byte[] message, Consumer<String> reply) {
+        String denied = platform.denied(player);
+        if (denied != null) {
+            reply.accept("&c" + denied);
+            return;
+        }
         Object decoded;
         try {
             decoded = Protocol.decode(message);

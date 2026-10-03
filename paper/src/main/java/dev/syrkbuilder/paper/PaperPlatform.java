@@ -74,6 +74,11 @@ final class PaperPlatform implements Platform<World, BlockData> {
     }
 
     @Override
+    public String denied(java.util.UUID id) {
+        return "SyrkBuilder doesn't work on servers yet.";
+    }
+
+    @Override
     public String scriptDenied(java.util.UUID id) {
         org.bukkit.entity.Player player = Bukkit.getPlayer(id);
         if (player == null || !player.hasPermission("syrkbuilder.script")) {

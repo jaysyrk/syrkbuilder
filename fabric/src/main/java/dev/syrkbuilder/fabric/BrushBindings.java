@@ -61,6 +61,9 @@ final class BrushBindings {
     }
 
     static String boundTo(Player player) {
+        if (SyrkBuilderClient.blocked() != null) {
+            return null;
+        }
         load();
         ItemStack stack = player.getMainHandItem();
         return stack.isEmpty() ? null : BINDINGS.get(itemId(stack));

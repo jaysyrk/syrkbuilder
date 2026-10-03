@@ -8,6 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 
@@ -84,6 +85,12 @@ final class LocalPlatform implements Platform<ServerLevel, BlockState> {
     @Override
     public void set(ServerLevel level, int x, int y, int z, BlockState state) {
         level.setBlock(new BlockPos(x, y, z), state, FLAGS);
+    }
+
+    @Override
+    public String denied(java.util.UUID player) {
+        ServerPlayer who = server.getPlayerList().getPlayer(player);
+        return who != null && who.isCreative() ? null : "SyrkBuilder only works in creative mode.";
     }
 
     @Override
