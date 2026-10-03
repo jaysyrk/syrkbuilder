@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 
-// A mask that lets an edit through only in organic patches: fractal blobs, voronoi cells, crack lines, or a height ramp.
-// Patterns are 2D (the same all the way up a column) unless 3d is given, so terrain and floors get clean patches.
 public final class NoiseMask {
     public static final List<String> NAMES = List.of("fractal", "cell", "voronoi", "crack", "ygradient");
     private static final int CALIBRATION = 4096;
@@ -108,7 +106,6 @@ public final class NoiseMask {
         return m;
     }
 
-    // Pick the cut-off from sampled values, so coverage=0.3 really lets about 30% through whatever the noise's range is.
     private void calibrate() {
         if (kind == Kind.CELL) {
             return;
@@ -160,7 +157,6 @@ public final class NoiseMask {
         };
     }
 
-    // Distance to the nearest and second-nearest feature point, plus a stable 0-1 id for the nearest cell.
     private double[] voronoi(double px, double py, double pz, double size) {
         double fx = px / size;
         double fy = volume ? py / size : 0;

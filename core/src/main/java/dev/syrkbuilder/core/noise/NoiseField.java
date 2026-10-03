@@ -15,8 +15,6 @@ public final class NoiseField {
         this.simplex = new SimplexNoise(seed);
     }
 
-    // Normalised per kind and octave count so that 0 is the middle of the relief and the highest and lowest 1% of the noise land
-    // on 1 and -1. Without it billowy sits well below zero and layering more octaves flattens everything, so strength= means nothing.
     public double sample(NoiseKind kind, double x, double z, int octaves) {
         double[] range = RANGES.computeIfAbsent(kind.ordinal() * 16 + octaves, k -> measure(kind, octaves));
         return (raw(kind, x, z, octaves) - range[0]) * range[1];

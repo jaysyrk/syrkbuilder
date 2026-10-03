@@ -347,8 +347,6 @@ public final class HistoryTree<B> {
             }
         }
         tree.nextId = Math.max(tree.nextId, tree.root.id + 1);
-        // If the entry you were on couldn't be loaded, stay on its closest surviving ancestor rather than
-        // jumping back to the start, so undo still lines up with what's actually in the world.
         Node<B> cur = null;
         NodeInfo info = infoById.get(currentId);
         for (int hops = 0; cur == null && info != null && hops <= infos.size(); hops++) {

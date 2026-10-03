@@ -163,8 +163,6 @@ public final class ScriptRunner {
         } catch (Timeout t) {
             throw new ScriptFailure("Script took longer than " + timeoutMillis + " ms and was stopped.");
         } catch (OutOfMemoryError e) {
-            // A runaway script can fill the heap faster than the timeout fires. Everything it allocated
-            // becomes unreachable once we unwind, so report it instead of taking the game or server down.
             throw new ScriptFailure("Script used too much memory and was stopped.");
         } catch (RhinoException e) {
             throw new ScriptFailure(e.details() + " (" + name + " line " + e.lineNumber() + ")");

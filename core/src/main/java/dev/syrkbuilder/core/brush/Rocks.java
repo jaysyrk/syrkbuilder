@@ -19,7 +19,6 @@ final class Rocks {
         }
     }
 
-    // A rock is a noisy ellipsoid sunk a little into the ground, so it reads as resting there rather than floating.
     private static void boulder(Brushes.Settings s, WorldView world, int cx, int cy, int cz, EditBuffer out) {
         PerlinNoise noise = new PerlinNoise(s.seed());
         double scale = s.scale() > 0 ? s.scale() : Math.max(3, Math.min(s.rx(), s.rz()) * 0.8);
@@ -44,7 +43,6 @@ final class Rocks {
         }
     }
 
-    // Faces are recoloured in horizontal bands that wobble with the noise, and the foot of each band sometimes juts out as a ledge.
     private static void cliff(Brushes.Settings s, WorldView world, int cx, int cy, int cz, EditBuffer out) {
         List<String> layers = s.pattern().blocks();
         int band = Math.max(1, s.depth());

@@ -19,7 +19,6 @@ public enum NoisePreset {
     public final double amplitude;
     public final String style;
     public final int steps;
-    // How far the relief sits above the aimed height, as a fraction of the amplitude, so mountains and islands rise out of the ground.
     public final double lift;
 
     NoisePreset(NoiseKind kind, double scale, int octaves, double amplitude, String style, int steps, double lift) {

@@ -1237,8 +1237,6 @@ final class EditorScreen extends Screen {
         return getFocused() instanceof EditBox;
     }
 
-    // Opened from a key press, Minecraft would focus the first text box, which then swallows F7 and the tool
-    // shortcuts. Clearing it on the first frame (clearFocus) comes too late if a key arrives before that frame.
     @Override
     protected void setInitialFocus() {
     }

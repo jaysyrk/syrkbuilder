@@ -22,7 +22,6 @@ public final class Brushes {
     private Brushes() {
     }
 
-    // How far a cell is from the centre as a fraction of the brush's size on each axis: 1 is the edge.
     static double reach(Settings s, int dx, int dy, int dz) {
         double a = dx / (s.rx() + 0.5);
         double b = dy / (s.ry() + 0.5);
@@ -87,8 +86,6 @@ public final class Brushes {
         }
     }
 
-    // Dithering blends a gradient across the height of a wall, but a block whose open faces all point along the
-    // gradient (the floor at the foot of that wall) sits at one point on it, where dithering only speckles.
     private static String paint(Pattern p, WorldView w, int x, int y, int z) {
         if (p.isGradient()) {
             for (int[] f : FACES) {
@@ -243,7 +240,6 @@ public final class Brushes {
         return rel;
     }
 
-    // Terrain grown by a brush gets the same surface layers as /sb terrain: rock where it is steep, snow up high, grass in the flats.
     private static void restyle(TerrainStyle style, NoiseField field, Heightfield result, boolean[] moved, EditBuffer out) {
         if (style == null) {
             return;

@@ -124,7 +124,6 @@ final class HistoryStore {
         });
     }
 
-    // Flush to disk, then swap in with one rename, so a crash leaves either the old file or the new one, never half of one.
     private static void commit(File tmp, File target) throws IOException {
         try (FileChannel channel = FileChannel.open(tmp.toPath(), StandardOpenOption.WRITE)) {
             channel.force(true);
