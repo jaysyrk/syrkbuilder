@@ -162,8 +162,6 @@ public final class Pattern {
         return bracket < 0 ? block : block.substring(0, bracket);
     }
 
-    // With a range, the first and last block sit at fixed world positions, so a brush stroke blends as one
-    // gradient instead of restarting in every dab. Without one, the gradient stretches over the shape it fills.
     private String pickGradient(int x, int y, int z, double dither) {
         double at;
         double lo;
@@ -180,7 +178,6 @@ public final class Pattern {
             lo = ranged ? rangeFrom : radial > 0 ? 0 : half;
             hi = ranged ? rangeTo : radial > 0 ? half : 0;
         } else if (ranged) {
-            // A range names world coordinates, so on a plain axis the range's order sets the direction.
             at = axisAligned ? x * Math.abs(dirX) + y * Math.abs(dirY) + z * Math.abs(dirZ) : x * dirX + y * dirY + z * dirZ;
             lo = rangeFrom;
             hi = rangeTo;
@@ -248,17 +245,14 @@ public final class Pattern {
         return this;
     }
 
-    // A straight gradient with no range stretches over whatever box it's bound to.
     public boolean fitsBounds() {
         return gradient && radial == 0 && !ranged;
     }
 
-    // A face that points along the gradient (a floor's top under an upward gradient) sits at a single point on it.
     public boolean along(int nx, int ny, int nz) {
         return gradient && radial == 0 && Math.abs(nx * dirX + ny * dirY + nz * dirZ) >= 0.7;
     }
 
-    // The nearest gradient step with no dithering, for surfaces where a dithered blend would only speckle.
     public String pickClean(int x, int y, int z) {
         if (gradient && blocks.size() > 1) {
             return pickGradient(x, y, z, 0.5);

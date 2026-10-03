@@ -41,8 +41,6 @@ public final class Session {
 
     private final Map<Integer, dev.syrkbuilder.core.edit.Box> strokeFrames = new LinkedHashMap<>();
 
-    // The gradient frame a brush stroke started with. Every later dab reuses it, so where dabs overlap they
-    // compute the same blocks instead of laying a shifted copy of the gradient over the last one.
     public dev.syrkbuilder.core.edit.Box strokeFrame(int stroke, dev.syrkbuilder.core.edit.Box first) {
         dev.syrkbuilder.core.edit.Box frame = strokeFrames.computeIfAbsent(stroke, k -> first);
         while (strokeFrames.size() > 16) {

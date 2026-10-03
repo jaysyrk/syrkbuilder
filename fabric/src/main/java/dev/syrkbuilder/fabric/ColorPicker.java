@@ -37,7 +37,6 @@ final class ColorPicker {
     private static final int LOOK = 6;
 
     static final int W = 240;
-    // The tallest the picker gets (the Gradient tab), for placing it on screen.
     static final int H = 236;
     private static final int GRADIENT_ROWS = 36;
 
@@ -85,7 +84,6 @@ final class ColorPicker {
         return useY(blocksTop(), gradient ? gradientBlocks().size() : nearest().size()) - y + 30;
     }
 
-    // Gradient steps sit in one row so the tab stays short enough for small screens.
     private static int perRow(int count) {
         return gradient ? Math.max(6, count) : 6;
     }
@@ -242,7 +240,6 @@ final class ColorPicker {
         return rangeFrom != null && rangeTo != null && !radial();
     }
 
-    // Where the aimed block sits along the gradient's direction, measured the same way the gradient measures it.
     private static Double aimedAlong() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) {
