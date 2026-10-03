@@ -8,6 +8,8 @@
 - Boulder brush: lumpy rocks set into the ground. Cliff brush: strata layers and ledges on steep faces
 - Noise masks: `/sb mask fractal:8:0.4`, `cell`, `voronoi`, `crack`, `ygradient:60:90`, `!` to invert, `:3d` for patterns that change with height, combinable with block masks. They apply to every edit
 - Terrain brushes now see mountains taller than twice their radius instead of treating the cut-off height as the ground
+- SyrkBuilder only works in creative mode now: in survival the editor, brushes, wand, noclip and fly speed all stay off, and the engine refuses requests from players who aren't in creative
+- Servers are switched off for now: the mod only works in singleplayer worlds (it no longer registers its network channel), and the Paper plugin refuses every request
 - Brushes take `seed=` to repeat the exact same random result, e.g. `/sb brush roughen 5 seed=7`
 - Opening the editor with a key no longer puts the cursor in a text box first, which could swallow F7 and the tool shortcuts
 

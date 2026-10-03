@@ -1459,6 +1459,15 @@ final class EditorScreen extends Screen {
     }
 
     @Override
+    public void tick() {
+        if (SyrkBuilderClient.blocked() != null) {
+            onClose();
+            return;
+        }
+        super.tick();
+    }
+
+    @Override
     public void removed() {
         stopLook();
         EditorMovement.release();

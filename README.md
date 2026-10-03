@@ -4,7 +4,7 @@ A building editor for Minecraft 1.21.11 & 26.2 (Fabric). Shapes, terrain, sculpt
 biomes, colour gradients, text, model, heightmap and schematic import, scripting and noclip, all in one in-game
 editor, with a live preview and an undo history you never lose.
 
-Works in singleplayer on its own. On a server, install the SyrkBuilder plugin (coming soon) on the server as well.
+Works in your own singleplayer worlds, in creative mode only. It does nothing on servers yet, and nothing in survival.
 
 ## Versions
 
@@ -144,6 +144,9 @@ noise(x, z, scale)                     rand()                  print(...)
 ```
 
 ## Servers (coming soon)
+
+Server support is switched off for now. The mod refuses to send anything to a server and the Paper plugin refuses every
+request, so installing both changes nothing. What follows is how it will work once it is released.
 
 Install the Fabric mod on your client and the SyrkBuilder Paper plugin on a Paper 1.21.11 server. Players need
 `syrkbuilder.use`. Noclip on servers uses spectator mode and needs `syrkbuilder.noclip`. Scripts run on the

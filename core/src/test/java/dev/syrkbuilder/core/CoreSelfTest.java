@@ -699,10 +699,16 @@ public final class CoreSelfTest {
     static final class MemoryPlatform implements dev.syrkbuilder.core.engine.Platform<FlatWorld, String> {
         final java.util.ArrayDeque<Runnable> mainThread = new java.util.ArrayDeque<>();
         String denyScripts;
+        String denyAll;
 
         @Override
         public String scriptDenied(java.util.UUID player) {
             return denyScripts;
+        }
+
+        @Override
+        public String denied(java.util.UUID player) {
+            return denyAll;
         }
 
         public WorldView view(FlatWorld w) {
@@ -895,6 +901,15 @@ public final class CoreSelfTest {
         msgs.clear();
         send.accept("set bogus_block", sel.apply(new int[]{5, 70, 5}, new int[]{5, 70, 5}));
         check("engine reports bad block", msgs.stream().anyMatch(m -> m.contains("Unknown block")), msgs);
+        platform.denyAll = "Not here.";
+        int deniedFrom = msgs.size();
+        send.accept("set stone", sel.apply(new int[]{900, 70, 900}, new int[]{900, 70, 900}));
+        send.accept("sync", none);
+        check("a platform that denies the player refuses every request", world.blockId(900, 70, 900).endsWith("air")
+            && msgs.subList(deniedFrom, msgs.size()).stream().filter(m -> m.equals("&cNot here.")).count() == 2, msgs.subList(deniedFrom, msgs.size()));
+        platform.denyAll = null;
+        send.accept("set stone", sel.apply(new int[]{900, 70, 900}, new int[]{900, 70, 900}));
+        check("and works again once it allows them", world.blockId(900, 70, 900).equals("minecraft:stone"), world.blockId(900, 70, 900));
         world.blocks.put(FlatWorld.key(40, 70, 40), "minecraft:dirt");
         world.blocks.put(FlatWorld.key(41, 70, 40), "minecraft:stone");
         send.accept("mask dirt", none);

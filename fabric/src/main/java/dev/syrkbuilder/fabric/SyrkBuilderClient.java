@@ -52,6 +52,8 @@ public final class SyrkBuilderClient implements ClientModInitializer {
 
 
     private static final KeyMapping.Category KEY_CATEGORY = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("syrkbuilder", "main"));
+    private static final boolean SERVER_SUPPORT = false;
+
     private static KeyMapping editorKey;
     private static KeyMapping noclipKey;
     private final SelectionParticles particles = new SelectionParticles();
@@ -63,14 +65,16 @@ public final class SyrkBuilderClient implements ClientModInitializer {
         LocalFiles.heightmaps();
         LocalFiles.scripts();
         LocalBackend.init();
-        PayloadTypeRegistry.serverboundPlay().register(SyrkPayload.TYPE, SyrkPayload.CODEC);
-        PayloadTypeRegistry.clientboundPlay().register(SyrkPayload.TYPE, SyrkPayload.CODEC);
-        ClientPlayNetworking.registerGlobalReceiver(SyrkPayload.TYPE, (payload, context) -> {
-            Protocol.Data data = Protocol.decodeData(payload.data());
-            if (data != null) {
-                ClientData.accept(data);
-            }
-        });
+        if (SERVER_SUPPORT) {
+            PayloadTypeRegistry.serverboundPlay().register(SyrkPayload.TYPE, SyrkPayload.CODEC);
+            PayloadTypeRegistry.clientboundPlay().register(SyrkPayload.TYPE, SyrkPayload.CODEC);
+            ClientPlayNetworking.registerGlobalReceiver(SyrkPayload.TYPE, (payload, context) -> {
+                Protocol.Data data = Protocol.decodeData(payload.data());
+                if (data != null) {
+                    ClientData.accept(data);
+                }
+            });
+        }
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             ClientData.clear();
             NoClip.clear();
@@ -172,6 +176,10 @@ public final class SyrkBuilderClient implements ClientModInitializer {
         noclipKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.syrkbuilder.noclip", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, KEY_CATEGORY));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (blocked() != null) {
+                NoClip.clear();
+                heldNoclip = false;
+            }
             particles.tick(client);
             EditorMovement.tick(client);
             BrushBindings.tick(client);
@@ -189,14 +197,19 @@ public final class SyrkBuilderClient implements ClientModInitializer {
             applyFlySpeed(client);
             while (editorKey.consumeClick()) {
                 if (client.gui.screen() == null && client.player != null) {
-                    client.gui.setScreen(new EditorScreen());
+                    String why = blocked();
+                    if (why != null) {
+                        Feedback.chat().error(why);
+                    } else {
+                        client.gui.setScreen(new EditorScreen());
+                    }
                 }
             }
         });
     }
 
     private static boolean isWand(Player player) {
-        return Settings.wand && player.getMainHandItem().is(Items.GOLDEN_AXE);
+        return Settings.wand && blocked() == null && player.getMainHandItem().is(Items.GOLDEN_AXE);
     }
 
     static String volumeSuffix() {
@@ -240,8 +253,9 @@ public final class SyrkBuilderClient implements ClientModInitializer {
         if (player == null) {
             return 0;
         }
-        if (!available()) {
-            fb.error("This server doesn't have the SyrkBuilder plugin - edits need it installed.");
+        String why = blocked();
+        if (why != null) {
+            fb.error(why);
             return 0;
         }
         BlockPos target = lookedAt(player);
@@ -322,8 +336,9 @@ public final class SyrkBuilderClient implements ClientModInitializer {
             fb.error("No " + (folder.equals(LocalFiles.heightmaps()) ? "heightmap" : "model") + " '" + name + "' in " + folder);
             return 0;
         }
-        if (!available()) {
-            fb.error("This server doesn't have the SyrkBuilder plugin - edits need it installed.");
+        String why = blocked();
+        if (why != null) {
+            fb.error(why);
             return 0;
         }
         ModelImporter.Options options;
@@ -376,8 +391,9 @@ public final class SyrkBuilderClient implements ClientModInitializer {
         if (player == null) {
             return 0;
         }
-        if (!available()) {
-            fb.error("This server doesn't have the SyrkBuilder plugin - edits need it installed.");
+        String why = blocked();
+        if (why != null) {
+            fb.error(why);
             return 0;
         }
         try {
@@ -406,6 +422,11 @@ public final class SyrkBuilderClient implements ClientModInitializer {
     static void toggleNoclip(Feedback fb) {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) {
+            return;
+        }
+        String why = blocked();
+        if (why != null) {
+            fb.error(why);
             return;
         }
         if (LocalBackend.active()) {
@@ -444,7 +465,7 @@ public final class SyrkBuilderClient implements ClientModInitializer {
 
     private static void applyFlySpeed(Minecraft client) {
         LocalPlayer player = client.player;
-        if (player == null || !player.getAbilities().mayfly) {
+        if (player == null || !player.getAbilities().mayfly || blocked() != null) {
             return;
         }
         if (LocalBackend.active() || Settings.flySpeed != 1.0) {
@@ -481,14 +502,30 @@ public final class SyrkBuilderClient implements ClientModInitializer {
         }
     };
 
+    static String blocked() {
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player == null) {
+            return "Join a world first.";
+        }
+        if (!LocalBackend.active()) {
+            if (!SERVER_SUPPORT) {
+                return "SyrkBuilder doesn't work on servers yet - only in your own singleplayer worlds.";
+            }
+            if (!ClientPlayNetworking.canSend(SyrkPayload.TYPE)) {
+                return "This server doesn't have the SyrkBuilder plugin - edits need it installed.";
+            }
+        }
+        return player.isCreative() ? null : "SyrkBuilder only works in creative mode.";
+    }
+
     static boolean available() {
-        return LocalBackend.active() || ClientPlayNetworking.canSend(SyrkPayload.TYPE);
+        return blocked() == null;
     }
 
     private static void transport(byte[] message) {
         if (LocalBackend.active()) {
             LocalBackend.send(message);
-        } else {
+        } else if (SERVER_SUPPORT) {
             ClientPlayNetworking.send(new SyrkPayload(message));
         }
     }
