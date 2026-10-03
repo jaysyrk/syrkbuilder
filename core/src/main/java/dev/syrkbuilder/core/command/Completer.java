@@ -41,7 +41,8 @@ public final class Completer {
         Map.entry("helix", new Spec(List.of(Kind.BLOCKS, Kind.NUMBER, Kind.NUMBER), List.of("6", "20"), List.of("turns=", "thickness="), List.of("-a"))),
         Map.entry("terrain", new Spec(List.of(Kind.TERRAIN), List.of(), TERRAIN_OPTIONS, List.of())),
         Map.entry("brush", new Spec(List.of(Kind.BRUSH, Kind.NUMBER, Kind.BLOCKS), List.of("3", "5", "8"),
-            List.of("strength=", "density=", "depth=", "height=", "scale=", "from=", "type=", "rx=", "ry=", "rz=", "seed="), List.of("-r"))),
+            List.of("strength=", "density=", "depth=", "height=", "scale=", "from=", "type=", "rx=", "ry=", "rz=", "seed=", "noise=", "octaves=", "preset=", "style="),
+            List.of("-r", "-n"))),
         Map.entry("copy", spec(List.of())),
         Map.entry("paste", new Spec(List.of(), List.of(), PASTE_OPTIONS, List.of("-a", "-flip"))),
         Map.entry("rotate", spec(List.of(Kind.ROTATION))),
@@ -55,7 +56,7 @@ public final class Completer {
         Map.entry("checkpoint", spec(List.of(Kind.NAME))),
         Map.entry("restore", spec(List.of(Kind.HISTORY))),
         Map.entry("help", spec(List.of())),
-        Map.entry("mask", spec(List.of(Kind.MASK))),
+        Map.entry("mask", new Spec(List.of(Kind.MASK, Kind.MASK), List.of(), List.of("seed="), List.of())),
         Map.entry("fill", new Spec(List.of(Kind.BLOCKS, Kind.NUMBER), List.of("8", "12", "24"), List.of("mode="), List.of())),
         Map.entry("tree", new Spec(List.of(Kind.TREE, Kind.NUMBER), List.of("6", "10", "16"), List.of("seed="), List.of())),
         Map.entry("path", new Spec(List.of(Kind.PATH_SUB, Kind.NUMBER, Kind.BLOCKS), List.of("3", "5", "7"), List.of("height="), List.of())),
@@ -224,6 +225,7 @@ public final class Completer {
             case BIOME -> filter(BIOMES, word);
             case MASK -> {
                 List<String> out = new ArrayList<>(filter(List.of("off"), word));
+                out.addAll(filter(dev.syrkbuilder.core.edit.NoiseMask.NAMES.stream().map(n -> n + ":").toList(), word));
                 out.addAll(blocks(word));
                 yield out;
             }
@@ -267,6 +269,9 @@ public final class Completer {
             case "depth=" -> List.of("1", "2", "3");
             case "scale=" -> List.of("4", "8", "16", "32");
             case "mode=" -> List.of("hole", "connected", "room");
+            case "noise=" -> dev.syrkbuilder.core.noise.NoiseKind.NAMES;
+            case "preset=" -> dev.syrkbuilder.core.noise.NoisePreset.NAMES;
+            case "octaves=" -> List.of("2", "3", "4", "6");
             case "type=" -> {
                 List<String> trees = new ArrayList<>(dev.syrkbuilder.core.tree.Trees.Type.NAMES);
                 trees.add("mix");

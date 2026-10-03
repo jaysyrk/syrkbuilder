@@ -10,6 +10,7 @@ public final class Session {
     private final Uploads uploads;
     private java.util.Set<String> mask;
     private boolean maskInverted;
+    private dev.syrkbuilder.core.edit.NoiseMask noiseMask;
     private String symmetry;
     private int[] symmetryOrigin;
 
@@ -76,6 +77,18 @@ public final class Session {
 
     public boolean maskAllows(String blockId) {
         return mask == null || mask.contains(blockId) != maskInverted;
+    }
+
+    public boolean maskAllows(int x, int y, int z, String blockId) {
+        return maskAllows(blockId) && (noiseMask == null || noiseMask.allows(x, y, z));
+    }
+
+    public dev.syrkbuilder.core.edit.NoiseMask noiseMask() {
+        return noiseMask;
+    }
+
+    public void noiseMask(dev.syrkbuilder.core.edit.NoiseMask noiseMask) {
+        this.noiseMask = noiseMask;
     }
 
     public void symmetry(String axes, int[] origin) {

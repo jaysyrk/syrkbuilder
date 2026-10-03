@@ -56,6 +56,8 @@ public final class CoreSelfTest {
         completion();
         warnings();
         brushes();
+        noiseTerrain();
+        noiseMasks();
         gradients();
         schematics();
         treesAndPaths();
@@ -904,6 +906,20 @@ public final class CoreSelfTest {
         check("inverted mask protects blocks", world.blockState(40, 70, 40).equals("minecraft:iron_block")
             && world.blockState(41, 70, 40).equals("minecraft:stone") && world.blockState(42, 70, 40).equals("minecraft:iron_block"), world.blockState(42, 70, 40));
         send.accept("mask off", none);
+        send.accept("mask fractal:4:0.3 seed=9", none);
+        send.accept("set gold_block", sel.apply(new int[]{200, 70, 200}, new int[]{239, 70, 200}));
+        int golds = 0;
+        for (int x = 200; x <= 239; x++) {
+            golds += world.blockState(x, 70, 200).equals("minecraft:gold_block") ? 1 : 0;
+        }
+        check("noise mask lets edits through in patches", golds >= 4 && golds <= 28, golds);
+        send.accept("mask off", none);
+        send.accept("set iron_block", sel.apply(new int[]{200, 71, 200}, new int[]{239, 71, 200}));
+        int irons = 0;
+        for (int x = 200; x <= 239; x++) {
+            irons += world.blockState(x, 71, 200).equals("minecraft:iron_block") ? 1 : 0;
+        }
+        check("mask off removes the noise mask", irons == 40, irons);
         send.accept("symmetry xz", look.apply(new int[]{50, 70, 50}));
         send.accept("set oak_stairs[facing=east]", sel.apply(new int[]{53, 70, 52}, new int[]{53, 70, 52}));
         check("symmetry x mirrors and flips facing", world.blockState(47, 70, 52).equals("minecraft:oak_stairs[facing=west]"), world.blockState(47, 70, 52));
@@ -1048,6 +1064,9 @@ public final class CoreSelfTest {
         check("script files", c.complete("m", "script").equals(List.of("maze")), c.complete("m", "script"));
         check("aliases", c.complete("t mesa style=me", null).equals(List.of("style=mesa")), c.complete("t mesa style=me", null));
         check("word start", dev.syrkbuilder.core.command.Completer.wordStart("sphere sto") == 7, "");
+        check("terragen noise values", c.complete("terragen 8 noise=ri", "brush").equals(List.of("noise=ridged")), c.complete("terragen 8 noise=ri", "brush"));
+        check("terragen preset values", c.complete("terragen 8 preset=a", "brush").equals(List.of("preset=alpine")), c.complete("terragen 8 preset=a", "brush"));
+        check("noise masks complete", c.complete("mask fr", null).equals(List.of("fractal:")), c.complete("mask fr", null));
         check("unknown command no crash", c.complete("bogus x", null).isEmpty(), "");
         check("brush types", c.complete("sm", "brush").equals(List.of("smooth")), c.complete("sm", "brush"));
         check("brush bind types", c.complete("bind ra", "brush").equals(List.of("raise")), c.complete("bind ra", "brush"));
@@ -1239,6 +1258,219 @@ public final class CoreSelfTest {
         check("terrace cuts steps", stepped, topAt(te, 0, 0) + "," + topAt(te, 1, 0) + "," + topAt(te, 2, 0) + "," + topAt(te, 3, 0));
         Result optional = brush(te, "brush sculpt 3 strength=1", new int[]{0, 64, 0});
         check("sculpt needs no blocks", optional.kind() == Result.Kind.EDIT, optional);
+    }
+
+
+    private static String surface(FlatWorld w, int radius) {
+        StringBuilder sb = new StringBuilder();
+        for (int z = -radius; z <= radius; z++) {
+            for (int x = -radius; x <= radius; x++) {
+                sb.append(topAt(w, x, z)).append(',');
+            }
+        }
+        return sb.toString();
+    }
+
+    private static int[] relief(FlatWorld w, int radius) {
+        int low = Integer.MAX_VALUE;
+        int high = Integer.MIN_VALUE;
+        int rough = 0;
+        for (int z = -radius; z <= radius; z++) {
+            for (int x = -radius; x <= radius; x++) {
+                int h = topAt(w, x, z);
+                low = Math.min(low, h);
+                high = Math.max(high, h);
+                rough += Math.abs(h - topAt(w, x + 1, z)) + Math.abs(h - topAt(w, x, z + 1));
+            }
+        }
+        return new int[]{low, high, rough};
+    }
+
+    private static void noiseTerrain() {
+        dev.syrkbuilder.core.noise.SimplexNoise sx = new dev.syrkbuilder.core.noise.SimplexNoise(5);
+        dev.syrkbuilder.core.noise.SimplexNoise sy = new dev.syrkbuilder.core.noise.SimplexNoise(5);
+        double lo = 9;
+        double hi = -9;
+        double sum = 0;
+        boolean same = true;
+        for (int i = 0; i < 20000; i++) {
+            double v = sx.noise(i * 0.173, i * 0.091);
+            double v3 = sx.noise(i * 0.173, i * 0.091, i * 0.057);
+            same &= v == sy.noise(i * 0.173, i * 0.091);
+            lo = Math.min(lo, Math.min(v, v3));
+            hi = Math.max(hi, Math.max(v, v3));
+            sum += v;
+        }
+        check("simplex deterministic", same, "");
+        check("simplex range", lo >= -1.2 && hi <= 1.2 && hi - lo > 1, lo + ".." + hi);
+        check("simplex is centred", Math.abs(sum / 20000) < 0.05, sum / 20000);
+        dev.syrkbuilder.core.noise.NoiseField field = new dev.syrkbuilder.core.noise.NoiseField(3);
+        boolean kindsDiffer = false;
+        boolean inRange = true;
+        for (int i = 0; i < 200; i++) {
+            double a = field.sample(dev.syrkbuilder.core.noise.NoiseKind.SIMPLEX, i * 0.37, i * 0.21, 4);
+            double b = field.sample(dev.syrkbuilder.core.noise.NoiseKind.RIDGED, i * 0.37, i * 0.21, 4);
+            double c = field.sample(dev.syrkbuilder.core.noise.NoiseKind.BILLOWY, i * 0.37, i * 0.21, 4);
+            kindsDiffer |= Math.abs(a - b) > 0.05 && Math.abs(b - c) > 0.05;
+            inRange &= Math.abs(a) <= 2 && Math.abs(b) <= 2 && Math.abs(c) <= 2;
+        }
+        check("noise kinds differ", kindsDiffer, "");
+        check("noise kinds stay in range", inRange, "");
+
+        FlatWorld t = meadow();
+        t.run(brush(t, "brush terragen 12 strength=10 noise=ridged seed=3", new int[]{0, 64, 0}).stream());
+        int[] r = relief(t, 10);
+        check("terragen builds relief around the aim height", r[1] - r[0] >= 8 && r[0] >= 44 && r[1] <= 84, r[0] + ".." + r[1]);
+        check("terragen blends out at the edge", topAt(t, 16, 0) == 64 && topAt(t, 0, 16) == 64, topAt(t, 16, 0));
+        FlatWorld again = meadow();
+        again.run(brush(again, "brush terragen 12 strength=10 noise=ridged seed=3", new int[]{0, 64, 0}).stream());
+        check("terragen is repeatable with a seed", surface(again, 12).equals(surface(t, 12)), "");
+        FlatWorld other = meadow();
+        other.run(brush(other, "brush terragen 12 strength=10 noise=billowy seed=3", new int[]{0, 64, 0}).stream());
+        check("noise= changes the terrain", !surface(other, 12).equals(surface(t, 12)), "");
+        FlatWorld fine = meadow();
+        fine.run(brush(fine, "brush terragen 12 strength=10 noise=ridged seed=3 -n", new int[]{0, 64, 0}).stream());
+        check("-n adds fine detail", !surface(fine, 12).equals(surface(t, 12)), "");
+        FlatWorld alp = meadow();
+        alp.run(brush(alp, "brush terragen 14 preset=alpine seed=4", new int[]{0, 64, 0}).stream());
+        Set<String> tops = new java.util.HashSet<>();
+        for (int x = -12; x <= 12; x++) {
+            for (int z = -12; z <= 12; z++) {
+                tops.add(alp.blockId(x, topAt(alp, x, z), z));
+            }
+        }
+        check("preset sets height and a style", relief(alp, 10)[1] - relief(alp, 10)[0] >= 10 && tops.size() >= 2 && tops.stream().anyMatch(b -> !b.equals("minecraft:grass_block")), tops);
+        check("bad noise is reported", brush(meadow(), "brush terragen 8 noise=bogus", new int[]{0, 64, 0}).kind() == Result.Kind.ERROR, "");
+        check("bad preset is reported", brush(meadow(), "brush terragen 8 preset=bogus", new int[]{0, 64, 0}).kind() == Result.Kind.ERROR, "");
+        check("bad style is reported", brush(meadow(), "brush terragen 8 style=bogus", new int[]{0, 64, 0}).kind() == Result.Kind.ERROR, "");
+
+        FlatWorld hill = meadow();
+        hill.run(brush(hill, "brush noise 14 strength=10 seed=2", new int[]{0, 64, 0}).stream());
+        int before = relief(hill, 10)[2];
+        hill.run(brush(hill, "brush erode 14 strength=1 seed=2", new int[]{0, 64, 0}).stream());
+        int after = relief(hill, 10)[2];
+        check("erode softens rough terrain", after < before, before + " -> " + after);
+        FlatWorld hill2 = meadow();
+        hill2.run(brush(hill2, "brush noise 14 strength=10 seed=2", new int[]{0, 64, 0}).stream());
+        hill2.run(brush(hill2, "brush erode 14 strength=1 seed=2", new int[]{0, 64, 0}).stream());
+        check("erode is repeatable with a seed", surface(hill2, 12).equals(surface(hill, 12)), "");
+
+        FlatWorld tall = meadow();
+        tall.run(brush(tall, "brush terragen 24 preset=alpine seed=5", new int[]{0, 64, 0}).stream());
+        int peak = 0;
+        for (int x = -12; x <= 12; x++) {
+            for (int z = -12; z <= 12; z++) {
+                peak = Math.max(peak, topAt(tall, x, z));
+            }
+        }
+        tall.run(brush(tall, "brush erode 24 strength=0.5 seed=5", new int[]{0, 64, 0}).stream());
+        boolean solid = true;
+        for (int x = -12; x <= 12; x++) {
+            for (int z = -12; z <= 12; z++) {
+                for (int y = 60; y <= topAt(tall, x, z); y++) {
+                    solid &= !tall.blockId(x, y, z).endsWith("air");
+                }
+            }
+        }
+        check("terrain brushes see mountains taller than 2r above the aim", peak > 112 && solid, peak + " " + solid);
+
+        FlatWorld rock = meadow();
+        rock.run(brush(rock, "brush boulder 4 stone ry=3 seed=1", new int[]{0, 64, 0}).stream());
+        check("boulder rises out of the ground", topAt(rock, 0, 0) >= 66 && rock.blockId(0, 65, 0).equals("minecraft:stone"), topAt(rock, 0, 0));
+        check("boulder stays inside its size", rock.blockId(7, 65, 0).endsWith("air") && rock.blockId(0, 65, 7).endsWith("air") && topAt(rock, 7, 7) == 64, "");
+        FlatWorld rock2 = meadow();
+        rock2.run(brush(rock2, "brush boulder 4 stone ry=3 seed=1", new int[]{0, 64, 0}).stream());
+        check("boulder is repeatable with a seed", surface(rock2, 8).equals(surface(rock, 8)), "");
+        FlatWorld rough = meadow();
+        rough.run(brush(rough, "brush boulder 4 stone ry=3 seed=1 strength=1", new int[]{0, 64, 0}).stream());
+        check("boulder roughness changes the shape", !surface(rough, 8).equals(surface(rock, 8)), "");
+
+        FlatWorld cliff = meadow();
+        for (int x = 0; x <= 10; x++) {
+            for (int z = -10; z <= 10; z++) {
+                for (int y = 65; y <= 80; y++) {
+                    cliff.blocks.put(FlatWorld.key(x, y, z), "minecraft:stone");
+                }
+            }
+        }
+        cliff.run(brush(cliff, "brush cliff 8 stone,andesite,granite depth=3 strength=1 seed=1", new int[]{0, 72, 0}).stream());
+        Set<String> strata = new java.util.HashSet<>();
+        int runs = 0;
+        String last = "";
+        for (int y = 66; y <= 78; y++) {
+            String id = cliff.blockId(0, y, 0);
+            strata.add(id);
+            runs += id.equals(last) ? 0 : 1;
+            last = id;
+        }
+        check("cliff stacks strata layers on the face", strata.size() >= 3 && runs >= 3 && runs <= 9, strata + " runs " + runs);
+        int ledges = 0;
+        for (int y = 66; y <= 78; y++) {
+            for (int z = -6; z <= 6; z++) {
+                ledges += !cliff.blockId(-1, y, z).endsWith("air") ? 1 : 0;
+            }
+        }
+        check("cliff juts out ledges", ledges >= 3, ledges);
+        check("cliff leaves the flat top alone", cliff.blockId(5, 80, 0).equals("minecraft:stone") && cliff.blockId(5, 81, 0).endsWith("air"), cliff.blockId(5, 81, 0));
+    }
+
+    private static double share(dev.syrkbuilder.core.edit.NoiseMask m, int y) {
+        int hits = 0;
+        int total = 0;
+        for (int x = 0; x < 200; x++) {
+            for (int z = 0; z < 100; z++) {
+                total++;
+                hits += m.allows(x, y, z) ? 1 : 0;
+            }
+        }
+        return hits / (double) total;
+    }
+
+    private static void noiseMasks() {
+        dev.syrkbuilder.core.edit.NoiseMask f = dev.syrkbuilder.core.edit.NoiseMask.parse("fractal:8:0.3", 1);
+        double fs = share(f, 70);
+        check("fractal coverage", fs > 0.22 && fs < 0.38, fs);
+        double inv = share(dev.syrkbuilder.core.edit.NoiseMask.parse("!fractal:8:0.3", 1), 70);
+        check("! inverts a noise mask", Math.abs(inv - (1 - fs)) < 0.001, inv);
+        double cs = share(dev.syrkbuilder.core.edit.NoiseMask.parse("cell:6:0.5", 1), 70);
+        check("cell coverage", cs > 0.35 && cs < 0.65, cs);
+        double vs = share(dev.syrkbuilder.core.edit.NoiseMask.parse("voronoi:8:0.15", 1), 70);
+        check("voronoi borders are thin", vs > 0.08 && vs < 0.24, vs);
+        double ks = share(dev.syrkbuilder.core.edit.NoiseMask.parse("crack:6:0.12", 1), 70);
+        check("crack coverage", ks > 0.06 && ks < 0.2, ks);
+        double vol = share(dev.syrkbuilder.core.edit.NoiseMask.parse("fractal:8:0.3:3d", 1), 70);
+        check("3d fractal coverage", vol > 0.22 && vol < 0.38, vol);
+        dev.syrkbuilder.core.edit.NoiseMask flat = dev.syrkbuilder.core.edit.NoiseMask.parse("fractal:8:0.3", 1);
+        boolean column = true;
+        for (int i = 0; i < 400; i++) {
+            column &= flat.allows(i, 60, i * 3) == flat.allows(i, 90, i * 3);
+        }
+        check("2d masks are the same up a column", column, "");
+        dev.syrkbuilder.core.edit.NoiseMask deep = dev.syrkbuilder.core.edit.NoiseMask.parse("fractal:5:0.4:3d", 1);
+        boolean varies = false;
+        for (int i = 0; i < 400; i++) {
+            varies |= deep.allows(i, 60, i * 3) != deep.allows(i, 90, i * 3);
+        }
+        check("3d masks change with height", varies, "");
+        dev.syrkbuilder.core.edit.NoiseMask ramp = dev.syrkbuilder.core.edit.NoiseMask.parse("ygradient:60:90", 1);
+        check("ygradient blocks below and passes above", share(ramp, 55) == 0 && share(ramp, 95) == 1, share(ramp, 55) + " / " + share(ramp, 95));
+        double mid = share(ramp, 75);
+        check("ygradient thins out through the middle", mid > 0.35 && mid < 0.65, mid);
+        check("noise mask seeds differ", share(dev.syrkbuilder.core.edit.NoiseMask.parse("fractal:8:0.3", 2), 70) > 0
+            && !java.util.stream.IntStream.range(0, 300).allMatch(i -> f.allows(i, 70, i) == dev.syrkbuilder.core.edit.NoiseMask.parse("fractal:8:0.3", 2).allows(i, 70, i)), "");
+        check("noise mask is repeatable", dev.syrkbuilder.core.edit.NoiseMask.parse("crack:6:0.12", 7).allows(33, 70, 12)
+            == dev.syrkbuilder.core.edit.NoiseMask.parse("crack:6:0.12", 7).allows(33, 70, 12), "");
+        check("noise mask specs are recognised", dev.syrkbuilder.core.edit.NoiseMask.isSpec("!crack:4") && dev.syrkbuilder.core.edit.NoiseMask.isSpec("cell")
+            && !dev.syrkbuilder.core.edit.NoiseMask.isSpec("stone") && !dev.syrkbuilder.core.edit.NoiseMask.isSpec("fractal_block"), "");
+        for (String bad : new String[]{"fractal:0", "fractal:8:1.5", "ygradient:60", "crack:a", "fractal:1:0.5:1:1"}) {
+            boolean threw = false;
+            try {
+                dev.syrkbuilder.core.edit.NoiseMask.parse(bad, 1);
+            } catch (IllegalArgumentException e) {
+                threw = true;
+            }
+            check("bad noise mask '" + bad + "' is rejected", threw, "");
+        }
     }
 
     private static void schematics() throws Exception {

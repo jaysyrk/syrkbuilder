@@ -74,7 +74,7 @@ final class StreamJob<W, B> implements EditJob {
 
     private void place(int x, int y, int z, String id) {
         B old = platform.get(world, x, y, z);
-        if (session != null && !session.maskAllows(platform.blockId(old))) {
+        if (session != null && !session.maskAllows(x, y, z, platform.blockId(old))) {
             return;
         }
         B data = parse(id);

@@ -2,6 +2,8 @@ package dev.syrkbuilder.fabric;
 
 import dev.syrkbuilder.core.brush.BrushType;
 import dev.syrkbuilder.core.model.BlockPalette;
+import dev.syrkbuilder.core.noise.NoiseKind;
+import dev.syrkbuilder.core.noise.NoisePreset;
 import dev.syrkbuilder.core.terrain.TerrainStyle;
 import dev.syrkbuilder.core.terrain.TerrainType;
 import java.util.ArrayList;
@@ -77,6 +79,11 @@ final class EditorScreen extends Screen {
     private static String brushDensity = "";
     private static String brushScale = "";
     private static String brushDepth = "1";
+    private static int brushNoise;
+    private static int brushPreset;
+    private static String brushOctaves = "";
+    private static boolean brushDetail;
+    private static String brushLayer = "";
     private static boolean brushReplaceTop;
     private static boolean brushStretch;
     private static String brushRx = "";
@@ -626,6 +633,18 @@ final class EditorScreen extends Screen {
             p.field("Depth", brushDepth, "1-16", v -> brushDepth = v);
             p.toggle("Replace top", () -> brushReplaceTop, v -> brushReplaceTop = v, "Swap the top layer instead of adding one");
         }
+        if (type == BrushType.CLIFF) {
+            p.field("Layer height", brushLayer, "3", v -> brushLayer = v);
+        }
+        if (type == BrushType.TERRAGEN) {
+            p.section("Noise");
+            p.chips(withFirst("auto", NoiseKind.NAMES), withFirst("simplex, or the preset's noise", NoiseKind.NAMES.stream().map(n -> NoiseKind.byName(n).description).toList()),
+                brushNoise, 3, v -> brushNoise = v);
+            p.section("Preset");
+            p.chips(withFirst("none", NoisePreset.NAMES), withFirst("height and surface blocks of your own choosing", NoisePreset.NAMES), brushPreset, 3, v -> brushPreset = v);
+            p.field("Octaves", brushOctaves, "auto (2-8)", v -> brushOctaves = v);
+            p.toggle("Fine detail", () -> brushDetail, v -> brushDetail = v, "Add small bumps on top of the noise (-n)");
+        }
         p.gap(4);
         String args = brushArgs(type);
         p.button("Bind to held item", true, () -> BrushBindings.bind(Feedback.chat(), args));
@@ -642,7 +661,14 @@ final class EditorScreen extends Screen {
         if (t.terrain()) {
             return 2;
         }
-        return t.voxel() || t == BrushType.SPIKES ? 1 : 0;
+        return t.voxel() || t == BrushType.SPIKES || t == BrushType.BOULDER || t == BrushType.CLIFF ? 1 : 0;
+    }
+
+    private static String[] withFirst(String first, List<String> rest) {
+        List<String> all = new ArrayList<>();
+        all.add(first);
+        all.addAll(rest);
+        return all.toArray(new String[0]);
     }
 
     private static String brushArgs(BrushType type) {
@@ -661,6 +687,21 @@ final class EditorScreen extends Screen {
         }
         if (type == BrushType.OVERLAY) {
             sb.append(" depth=").append(num(brushDepth)).append(brushReplaceTop ? " -r" : "");
+        }
+        if (type == BrushType.CLIFF && !brushLayer.isBlank()) {
+            sb.append(" depth=").append(num(brushLayer));
+        }
+        if (type == BrushType.TERRAGEN) {
+            if (brushNoise > 0) {
+                sb.append(" noise=").append(NoiseKind.NAMES.get(brushNoise - 1));
+            }
+            if (brushPreset > 0) {
+                sb.append(" preset=").append(NoisePreset.NAMES.get(brushPreset - 1));
+            }
+            if (!brushOctaves.isBlank()) {
+                sb.append(" octaves=").append(num(brushOctaves));
+            }
+            sb.append(brushDetail ? " -n" : "");
         }
         if (brushStretch && type != BrushType.STAMP) {
             if (!brushRx.isBlank()) {

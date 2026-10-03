@@ -29,6 +29,11 @@ public enum BrushType {
     CRATER(Blocks.NONE, 4, 64, List.of(), "dig a bowl with a raised rim (strength= depth)"),
     TERRACE(Blocks.NONE, 4, 32, List.of(), "cut terrain into steps (strength= step height)"),
     MELT(Blocks.NONE, -1, 0, List.of(), "erode sharp edges into slopes"),
+    TERRAGEN(Blocks.NONE, 8, 64, List.of("noise", "scale", "octaves", "preset", "style"),
+        "grow terrain from noise at the height you aim (noise=simplex|fractal|billowy|ridged, preset=, strength= height, -n adds fine detail)"),
+    ERODE(Blocks.NONE, 0.5, 1, List.of(), "water and slope erosion: gullies, scree, softened peaks (strength= 0-1)"),
+    BOULDER(Blocks.REQUIRED, 0.4, 1, List.of("scale"), "a lumpy rock sitting on the ground (radius/rx/ry/rz = size, strength= roughness)"),
+    CLIFF(Blocks.REQUIRED, 0.5, 1, List.of("depth"), "stack strata layers and ledges onto steep faces (depth= layer height, the blocks cycle as layers)"),
     STAMP(Blocks.NONE, -1, 0, List.of(), "paint your clipboard where you aim, randomly turned (-r keeps it straight)");
 
     public enum Blocks { REQUIRED, OPTIONAL, NONE }
@@ -63,7 +68,7 @@ public enum BrushType {
 
     public boolean terrain() {
         return switch (this) {
-            case RAISE, LOWER, SMOOTH, FLATTEN, NOISE, MELT, CRATER, TERRACE -> true;
+            case RAISE, LOWER, SMOOTH, FLATTEN, NOISE, MELT, CRATER, TERRACE, TERRAGEN, ERODE -> true;
             default -> false;
         };
     }
@@ -80,7 +85,7 @@ public enum BrushType {
     }
 
     public int maxRadius() {
-        return voxel() ? 32 : 64;
+        return voxel() || this == BOULDER || this == CLIFF ? 32 : 64;
     }
 
     public static BrushType byName(String name) {

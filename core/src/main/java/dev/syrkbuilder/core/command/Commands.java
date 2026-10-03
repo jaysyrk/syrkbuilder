@@ -59,7 +59,7 @@ public final class Commands {
         "&eScripts&7: script <file> [args] &8(.minecraft/syrkbuilder/scripts, or the server's scripts folder)",
         "&eGradients&7: blocks like &fgrad:stone,andesite,diorite&7 run upwards; &fgradient <from> <to> [steps]&7 finds in-between blocks",
         "&eGradient options&7: &fgrad(down):&7, east/west/north/south, out/in, look or 1/0/1; add a range to pin the ends: &fgrad(up,60..90):",
-        "&eMask & mirror&7: mask <blocks|!blocks|off>, symmetry <x|z|xz|off> &8(apply to every edit)",
+        "&eMask & mirror&7: mask <blocks|!blocks|fractal|cell|voronoi|crack|ygradient|off>, symmetry <x|z|xz|off> &8(apply to every edit)",
         "&eHistory&7: undo [n], redo [n], history, goto <#id|checkpoint>, checkpoint <name>, restore <#id|checkpoint>",
         "&7Blocks can be mixes: &f60%stone,40%andesite&7. Flags: &f-h&7 hollow, &f-a&7 skip/only air.");
 
@@ -784,23 +784,48 @@ public final class Commands {
     private Result mask(Args a, Session session) {
         String raw = a.word(1);
         if (raw == null) {
-            if (session.mask() == null) {
-                return Result.message("&7No mask - edits can change any block. &f/sb mask grass_block,dirt&7 or &f/sb mask !leaves");
+            if (session.mask() == null && session.noiseMask() == null) {
+                return Result.message("&7No mask - edits can change any block. &f/sb mask grass_block,dirt&7, &f/sb mask !leaves&7 or a noise mask like &f/sb mask fractal:8:0.4");
             }
-            return Result.message("&7Mask: " + (session.maskInverted() ? "everything except " : "only ") + "&f" + String.join(", ", session.mask()));
+            List<String> lines = new ArrayList<>();
+            if (session.mask() != null) {
+                lines.add("&7Mask: " + (session.maskInverted() ? "everything except " : "only ") + "&f" + String.join(", ", session.mask()));
+            }
+            if (session.noiseMask() != null) {
+                lines.add("&7Noise mask: edits only land in &f" + session.noiseMask().describe());
+            }
+            return Result.message(lines);
         }
         if (raw.equalsIgnoreCase("off") || raw.equalsIgnoreCase("none")) {
             session.mask(null, false);
+            session.noiseMask(null);
             return Result.message("&7Mask off - edits can change any block.");
         }
-        boolean inverted = raw.startsWith("!");
         Set<String> ids = new HashSet<>();
-        for (String b : Pattern.parse(inverted ? raw.substring(1) : raw).blocks()) {
-            ids.add(Pattern.baseId(b));
+        boolean inverted = false;
+        dev.syrkbuilder.core.edit.NoiseMask noise = null;
+        for (int i = 1; a.word(i) != null; i++) {
+            String word = a.word(i);
+            if (dev.syrkbuilder.core.edit.NoiseMask.isSpec(word)) {
+                noise = dev.syrkbuilder.core.edit.NoiseMask.parse(word, a.longValue("seed", System.nanoTime()));
+                continue;
+            }
+            inverted = word.startsWith("!");
+            for (String b : Pattern.parse(inverted ? word.substring(1) : word).blocks()) {
+                ids.add(Pattern.baseId(b));
+            }
         }
-        session.mask(ids, inverted);
-        return Result.message("&aMask set&7: edits will " + (inverted ? "never change " : "only change ") + "&f" + String.join(", ", ids)
-            + "&7. Turn off with &f/sb mask off");
+        session.mask(ids.isEmpty() ? null : ids, inverted);
+        session.noiseMask(noise);
+        List<String> lines = new ArrayList<>();
+        if (!ids.isEmpty()) {
+            lines.add("&aMask set&7: edits will " + (inverted ? "never change " : "only change ") + "&f" + String.join(", ", ids));
+        }
+        if (noise != null) {
+            lines.add("&aNoise mask set&7: edits only land in &f" + noise.describe());
+        }
+        lines.add("&7Turn off with &f/sb mask off");
+        return Result.message(lines);
     }
 
     private Result symmetry(Request req, Args a, Session session) {
@@ -941,7 +966,26 @@ public final class Commands {
             case OPTIONAL -> a.word(3) != null ? pattern(a, 3) : null;
             case NONE -> Pattern.of("stone");
         };
-        double strength = type.usesStrength() ? a.doubleValue("strength", type.defaultStrength, 0, type.maxStrength) : 0.5;
+        dev.syrkbuilder.core.noise.NoisePreset preset = null;
+        if (a.has("preset")) {
+            preset = dev.syrkbuilder.core.noise.NoisePreset.byName(a.string("preset", ""));
+            if (preset == null) {
+                return Result.error("Unknown preset '" + a.string("preset", "") + "'. Presets: " + String.join(", ", dev.syrkbuilder.core.noise.NoisePreset.NAMES));
+            }
+        }
+        dev.syrkbuilder.core.noise.NoiseKind noise = null;
+        if (a.has("noise")) {
+            noise = dev.syrkbuilder.core.noise.NoiseKind.byName(a.string("noise", ""));
+            if (noise == null) {
+                return Result.error("Unknown noise '" + a.string("noise", "") + "'. Noise: " + String.join(", ", dev.syrkbuilder.core.noise.NoiseKind.NAMES));
+            }
+        }
+        String style = a.has("style") ? a.string("style", "") : null;
+        if (style != null && dev.syrkbuilder.core.terrain.TerrainStyle.byName(style) == null) {
+            return Result.error("Unknown style '" + style + "'. Styles: " + String.join(", ", dev.syrkbuilder.core.terrain.TerrainStyle.NAMES));
+        }
+        double defaultStrength = type == dev.syrkbuilder.core.brush.BrushType.TERRAGEN && preset != null ? preset.amplitude : type.defaultStrength;
+        double strength = type.usesStrength() ? a.doubleValue("strength", defaultStrength, 0, type.maxStrength) : 0.5;
         double density = a.doubleValue("density", switch (type) {
             case SPLATTER -> 0.5;
             case DECAY -> 0.3;
@@ -961,8 +1005,9 @@ public final class Commands {
             ? session.strokeFrame(stroke, new Box(t[0] - rx, t[1] - ry, t[2] - rz, t[0] + rx, t[1] + ry, t[2] + rz))
             : null;
         dev.syrkbuilder.core.brush.Brushes.Settings settings = new dev.syrkbuilder.core.brush.Brushes.Settings(type, radius, rx, ry, rz, pattern, strength,
-            density, a.intValue("depth", 1, 1, 16), a.intValue("height", 1, 1, 16),
-            a.doubleValue("scale", 0, 0, 256), a.flag("r"), from, a.longValue("seed", System.nanoTime()), a.string("type", "oak"), frame);
+            density, a.intValue("depth", type == dev.syrkbuilder.core.brush.BrushType.CLIFF ? 3 : 1, 1, 16), a.intValue("height", 1, 1, 16),
+            a.doubleValue("scale", 0, 0, 256), a.flag("r"), from, a.longValue("seed", System.nanoTime()), a.string("type", "oak"), frame,
+            noise, a.intValue("octaves", 0, 0, 8), preset == null ? null : preset.id(), style, a.flag("n"));
         if (type == dev.syrkbuilder.core.brush.BrushType.TREES) {
             dev.syrkbuilder.core.brush.Brushes.treeTypes(settings.variant());
         }
