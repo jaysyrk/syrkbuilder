@@ -40,7 +40,11 @@ jobs:
           if [ "$GITHUB_REF_TYPE" != "tag" ]; then
             tag="v$version+$mc"
           fi
-          gh release create "$tag" "$jar" --target "$GITHUB_SHA" --title "SyrkBuilder $version for Minecraft $mc" --notes-file notes.md
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists, skipping"
+          else
+            gh release create "$tag" "$jar" --target "$GITHUB_SHA" --title "SyrkBuilder $version for Minecraft $mc" --notes-file notes.md
+          fi
 
       - name: Upload to Modrinth
         env:
