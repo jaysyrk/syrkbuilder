@@ -1,8 +1,9 @@
 # Changelog
 
-## Unreleased
+## 1.3.1
 
 - The editor aims where your mouse pointer is instead of the crosshair: clicks, drags, brushes and the aim buttons use the block under the pointer, which is outlined with sparks. While you hold right-click to look around, it still aims at the crosshair
+- Settings → Aim at switches between the pointer and the crosshair, and a one-time hint explains the pointer the first time you open the editor
 
 ## 1.3.0
 

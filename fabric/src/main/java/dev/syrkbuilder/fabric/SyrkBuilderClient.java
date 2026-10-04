@@ -226,6 +226,10 @@ public final class SyrkBuilderClient implements ClientModInitializer {
     private static int cursorH;
 
     static void cursor(double x, double y, int screenW, int screenH) {
+        if (!Settings.aimPointer) {
+            clearCursor();
+            return;
+        }
         cursorX = x;
         cursorY = y;
         cursorW = screenW;

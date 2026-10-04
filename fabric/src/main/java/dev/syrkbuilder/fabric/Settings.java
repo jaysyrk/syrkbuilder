@@ -18,6 +18,8 @@ final class Settings {
     static boolean wand = true;
     static boolean previewByDefault = true;
     static boolean quietChat;
+    static boolean aimPointer = true;
+    static boolean aimHintSeen;
 
     private static boolean loaded;
 
@@ -52,6 +54,8 @@ final class Settings {
         wand = bool(p, "wand", wand);
         previewByDefault = bool(p, "preview", previewByDefault);
         quietChat = bool(p, "quiet-chat", quietChat);
+        aimPointer = bool(p, "aim-pointer", aimPointer);
+        aimHintSeen = bool(p, "aim-hint-seen", aimHintSeen);
     }
 
     static void save() {
@@ -65,6 +69,8 @@ final class Settings {
         p.setProperty("wand", String.valueOf(wand));
         p.setProperty("preview", String.valueOf(previewByDefault));
         p.setProperty("quiet-chat", String.valueOf(quietChat));
+        p.setProperty("aim-pointer", String.valueOf(aimPointer));
+        p.setProperty("aim-hint-seen", String.valueOf(aimHintSeen));
         try {
             Files.createDirectories(file().getParent());
             try (Writer w = Files.newBufferedWriter(file())) {

@@ -34,7 +34,8 @@ Downloads are on Modrinth and on the Releases page.
 ## The editor (F7)
 
 Left-click uses the current tool on the block under your mouse pointer, which is outlined with sparks. Hold
-right-click over the world to look around (then it aims at the crosshair), and move with WASD, space and shift. Middle-click copies the block you aim at into the tool's Blocks field.
+right-click over the world to look around (then it aims at the crosshair), and move with WASD, space and shift.
+Settings → Aim at switches back to the crosshair if you prefer it. Middle-click copies the block you aim at into the tool's Blocks field.
 
 | Tool | What it does |
 |---|---|
