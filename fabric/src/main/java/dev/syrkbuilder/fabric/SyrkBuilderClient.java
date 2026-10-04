@@ -4,6 +4,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import dev.syrkbuilder.core.command.Args;
 import dev.syrkbuilder.core.command.Completer;
+import dev.syrkbuilder.core.edit.ViewRay;
 import dev.syrkbuilder.core.grid.BlockGrid;
 import dev.syrkbuilder.core.grid.GridCodec;
 import dev.syrkbuilder.core.model.ModelImporter;
@@ -32,6 +33,7 @@ import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
@@ -40,8 +42,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 public final class SyrkBuilderClient implements ClientModInitializer {
     private static final double REACH = 256.0;
@@ -216,12 +220,50 @@ public final class SyrkBuilderClient implements ClientModInitializer {
         return Selection.complete() ? " §8(" + Selection.volume() + " blocks)" : "";
     }
 
+    private static double cursorX;
+    private static double cursorY;
+    private static int cursorW;
+    private static int cursorH;
+
+    static void cursor(double x, double y, int screenW, int screenH) {
+        cursorX = x;
+        cursorY = y;
+        cursorW = screenW;
+        cursorH = screenH;
+    }
+
+    static void clearCursor() {
+        cursorW = 0;
+        cursorH = 0;
+    }
+
+    static boolean cursorAim() {
+        return cursorW > 0 && cursorH > 0;
+    }
+
     static BlockPos lookedAt(LocalPlayer player) {
+        if (cursorAim()) {
+            return underCursor(player);
+        }
         HitResult hit = player.pick(REACH, 1.0f, false);
         if (hit instanceof BlockHitResult blockHit && hit.getType() == HitResult.Type.BLOCK) {
             return blockHit.getBlockPos().immutable();
         }
         return null;
+    }
+
+    private static BlockPos underCursor(LocalPlayer player) {
+        Minecraft mc = Minecraft.getInstance();
+        Camera camera = mc.gameRenderer.getMainCamera();
+        var f = camera.forwardVector();
+        var l = camera.leftVector();
+        var u = camera.upVector();
+        double[] d = ViewRay.direction(new double[]{f.x(), f.y(), f.z()}, new double[]{l.x(), l.y(), l.z()}, new double[]{u.x(), u.y(), u.z()},
+            mc.options.fov().get(), (double) cursorW / cursorH, (cursorX / cursorW) * 2 - 1, 1 - (cursorY / cursorH) * 2);
+        Vec3 from = camera.position();
+        Vec3 to = from.add(d[0] * REACH, d[1] * REACH, d[2] * REACH);
+        BlockHitResult hit = player.level().clip(new ClipContext(from, to, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
+        return hit.getType() == HitResult.Type.BLOCK ? hit.getBlockPos().immutable() : null;
     }
 
     static int setPos(Feedback fb, boolean first) {

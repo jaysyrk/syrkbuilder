@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The editor aims where your mouse pointer is instead of the crosshair: clicks, drags, brushes and the aim buttons use the block under the pointer, which is outlined with sparks. While you hold right-click to look around, it still aims at the crosshair
+
 ## 1.3.0
 
 - Seven new terrain generators: `buttes`, `valley` (with a winding river), `fjord`, `lake`, `atoll`, `archipelago` and `swamp`. The wet ones fill their low ground with water
