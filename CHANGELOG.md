@@ -1,18 +1,21 @@
 # Changelog
 
-## Unreleased
+## 1.3.0
 
 - Seven new terrain generators: `buttes`, `valley` (with a winding river), `fjord`, `lake`, `atoll`, `archipelago` and `swamp`. The wet ones fill their low ground with water
 - Two new terrain styles: `coastal` (sand, gravel, clay, grass) and `swamp` (mud, moss, podzol)
-- Lake brush: digs a bowl and floods it with water up to the height you aim at
 - Terragen brush grows terrain from noise at the height you aim: `/sb brush terragen 20 noise=simplex|fractal|billowy|ridged strength= scale= octaves=`, `-n` for extra fine detail
 - Terragen presets set the noise, size and surface blocks in one go: `preset=alpine|rolling|dunes|mesa|islands|craggy`, or pick surface blocks with `style=`
+- Lake brush: digs a bowl and floods it with water up to the height you aim at
 - Erode brush: water and slope erosion that carves gullies and softens peaks
 - Boulder brush: lumpy rocks set into the ground. Cliff brush: strata layers and ledges on steep faces
+- Rock arch brush: a natural stone arch standing on the ground. Caves brush: winding tunnels carved through solid ground
 - Noise masks: `/sb mask fractal:8:0.4`, `cell`, `voronoi`, `crack`, `ygradient:60:90`, `!` to invert, `:3d` for patterns that change with height, combinable with block masks. They apply to every edit
+- Terrain tab: save your favourite settings as named presets and load them again with one click (kept in `syrkbuilder/terrain-presets.txt`)
+- The valley's outline is rounded instead of rectangular
 - Terrain brushes now see mountains taller than twice their radius instead of treating the cut-off height as the ground
 - SyrkBuilder only works in creative mode now: in survival the editor, brushes, wand, noclip and fly speed all stay off, and the engine refuses requests from players who aren't in creative
-- Servers are switched off for now: the mod only works in singleplayer worlds (it no longer registers its network channel), and the Paper plugin refuses every request
+- Servers are switched off for now: the mod only works in singleplayer worlds (it no longer registers its network channel), and the Paper plugin refuses every request. Server support will come back in a later release
 - Brushes take `seed=` to repeat the exact same random result, e.g. `/sb brush roughen 5 seed=7`
 - Opening the editor with a key no longer puts the cursor in a text box first, which could swallow F7 and the tool shortcuts
 

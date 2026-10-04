@@ -32,6 +32,8 @@ public enum BrushType {
     TERRAGEN(Blocks.NONE, 8, 64, List.of("noise", "scale", "octaves", "preset", "style"),
         "grow terrain from noise at the height you aim (noise=simplex|fractal|billowy|ridged, preset=, strength= height, -n adds fine detail)"),
     LAKE(Blocks.NONE, 4, 64, List.of(), "dig a bowl and flood it with water up to the height you aim (strength= depth)"),
+    ROCKARCH(Blocks.REQUIRED, 0.4, 1, List.of("scale"), "a natural rock arch standing on the ground (the longer of rx/rz is the span, ry the height, strength= roughness)"),
+    CAVES(Blocks.NONE, 0.12, 0.5, List.of("scale"), "carve winding cave tunnels through solid ground (strength= tunnel width, scale= how tightly they twist)"),
     ERODE(Blocks.NONE, 0.5, 1, List.of(), "water and slope erosion: gullies, scree, softened peaks (strength= 0-1)"),
     BOULDER(Blocks.REQUIRED, 0.4, 1, List.of("scale"), "a lumpy rock sitting on the ground (radius/rx/ry/rz = size, strength= roughness)"),
     CLIFF(Blocks.REQUIRED, 0.5, 1, List.of("depth"), "stack strata layers and ledges onto steep faces (depth= layer height, the blocks cycle as layers)"),
@@ -86,7 +88,7 @@ public enum BrushType {
     }
 
     public int maxRadius() {
-        return voxel() || this == BOULDER || this == CLIFF ? 32 : 64;
+        return voxel() || this == BOULDER || this == CLIFF || this == ROCKARCH || this == CAVES ? 32 : 64;
     }
 
     public static BrushType byName(String name) {

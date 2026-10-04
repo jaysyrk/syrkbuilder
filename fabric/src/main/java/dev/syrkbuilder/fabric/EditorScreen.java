@@ -72,6 +72,7 @@ final class EditorScreen extends Screen {
     private static String tRoughness = "0.5";
     private static String tPeaks = "3";
     private static String tSeed = "";
+    private static String tPresetName = "";
     private static int brushType;
     private static String brushRadius = "5";
     private static String brushBlocks = "stone";
@@ -562,6 +563,15 @@ final class EditorScreen extends Screen {
             }
             return cmd.toString();
         }, () -> Math.max(6, number(tRadius, 48) * 0.7), true);
+        p.section("My presets");
+        List<String> saved = TerrainPresets.names();
+        if (saved.isEmpty()) {
+            p.note("§8Type a name and press Save to keep the settings above.");
+        } else {
+            p.chips(saved.toArray(new String[0]), null, saved.indexOf(tPresetName.trim()), 3, v -> loadTerrainPreset(saved.get(v)));
+        }
+        p.field("Name", tPresetName, "my mountain", v -> tPresetName = v);
+        p.buttons("Save", this::saveTerrainPreset, "Delete", this::deleteTerrainPreset);
         p.section("Touch-ups");
         p.field("Radius", touchRadius, "12", v -> touchRadius = v);
         p.buttons("Snow", () -> run("snow " + touchRadius()), "Thaw", () -> run("thaw " + touchRadius()));
@@ -661,7 +671,50 @@ final class EditorScreen extends Screen {
         if (t.terrain()) {
             return 2;
         }
-        return t.voxel() || t == BrushType.SPIKES || t == BrushType.BOULDER || t == BrushType.CLIFF ? 1 : 0;
+        return t.voxel() || t == BrushType.SPIKES || t == BrushType.BOULDER || t == BrushType.CLIFF || t == BrushType.ROCKARCH || t == BrushType.CAVES ? 1 : 0;
+    }
+
+    private void loadTerrainPreset(String name) {
+        String[] v = TerrainPresets.get(name);
+        if (v == null) {
+            return;
+        }
+        TerrainType[] all = TerrainType.values();
+        for (int i = 0; i < all.length; i++) {
+            if (all[i].id().equals(v[0])) {
+                terrainType = i;
+            }
+        }
+        try {
+            terrainStyle = Math.max(-1, Math.min(TerrainStyle.NAMES.size() - 1, Integer.parseInt(v[1])));
+        } catch (NumberFormatException e) {
+            terrainStyle = -1;
+        }
+        tRadius = v[2];
+        tHeight = v[3];
+        tErosion = v[4];
+        tRoughness = v[5];
+        tPeaks = v[6];
+        tSeed = v[7];
+        tPresetName = name;
+        rebuildWidgets();
+    }
+
+    private void saveTerrainPreset() {
+        String name = TerrainPresets.clean(tPresetName);
+        if (name.isEmpty()) {
+            return;
+        }
+        tPresetName = name;
+        TerrainPresets.put(name, new String[]{TerrainType.values()[terrainType].id(), String.valueOf(terrainStyle), tRadius, tHeight, tErosion,
+            tRoughness, tPeaks, tSeed});
+        rebuildWidgets();
+    }
+
+    private void deleteTerrainPreset() {
+        TerrainPresets.remove(tPresetName.trim());
+        tPresetName = "";
+        rebuildWidgets();
     }
 
     private static String[] withFirst(String first, List<String> rest) {
