@@ -75,7 +75,18 @@ final class PaperPlatform implements Platform<World, BlockData> {
 
     @Override
     public String denied(java.util.UUID id) {
-        return "SyrkBuilder doesn't work on servers yet.";
+        if (!plugin.getConfig().getBoolean("enabled", true)) {
+            return "SyrkBuilder is switched off on this server.";
+        }
+        org.bukkit.entity.Player player = Bukkit.getPlayer(id);
+        if (player == null) {
+            return "You have to be online to use SyrkBuilder.";
+        }
+        boolean creative = player.getGameMode() == org.bukkit.GameMode.CREATIVE || beforeNoclip.containsKey(id);
+        if (plugin.getConfig().getBoolean("require-creative", true) && !creative) {
+            return "SyrkBuilder only works in creative mode.";
+        }
+        return null;
     }
 
     @Override

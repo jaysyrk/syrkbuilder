@@ -1,3 +1,5 @@
+enabled: true
+require-creative: true
 max-volume: 4000000
 blocks-per-tick: 40000
 history-blocks: 5000000

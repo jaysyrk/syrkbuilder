@@ -38,7 +38,7 @@ public final class SyrkBuilderPlugin extends JavaPlugin implements PluginMessage
         for (Player p : Bukkit.getOnlinePlayers()) {
             engine.preload(p.getUniqueId(), p.getWorld());
         }
-        getLogger().info("SyrkBuilder is switched off on servers for now: every request is refused until server support is released.");
+        getLogger().info("SyrkBuilder ready - waiting for clients on " + Protocol.CHANNEL + (getConfig().getBoolean("enabled", true) ? "" : " (switched off in config.yml)"));
     }
 
     @Override

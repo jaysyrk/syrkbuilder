@@ -4,7 +4,7 @@ A building editor for Minecraft 1.21.11 & 26.2 (Fabric). Shapes, terrain, sculpt
 biomes, colour gradients, text, model, heightmap and schematic import, scripting and noclip, all in one in-game
 editor, with a live preview and an undo history you never lose.
 
-Works in your own singleplayer worlds, in creative mode only. It does nothing on servers yet, and nothing in survival.
+Works in creative mode: in your own singleplayer worlds, or on a Paper server that has the SyrkBuilder plugin. Nothing happens in survival.
 
 ## Versions
 
@@ -151,14 +151,13 @@ noise(x, z, scale)                     rand()                  print(...)
 
 ## Known limits
 
-SyrkBuilder works in singleplayer worlds in creative mode only. Servers and survival are switched off for now.
+SyrkBuilder only works in creative mode. On a server it also needs the SyrkBuilder plugin.
 
-## Servers (coming soon)
-
-Server support is switched off for now. The mod refuses to send anything to a server and the Paper plugin refuses every
-request, so installing both changes nothing. What follows is how it will work once it is released.
+## Servers
 
 Install the Fabric mod on your client and the SyrkBuilder Paper plugin on a Paper 1.21.11 server. Players need
-`syrkbuilder.use`. Noclip on servers uses spectator mode and needs `syrkbuilder.noclip`. Scripts run on the
-server, so they need `syrkbuilder.script`; only give it to players you trust. Limits (edit size, blocks per
-tick, history size, upload size, script time) are in `plugins/SyrkBuilder/config.yml`.
+`syrkbuilder.use` and must be in creative mode. Noclip on servers uses spectator mode and needs `syrkbuilder.noclip`.
+Scripts run on the server, so they need `syrkbuilder.script`; only give it to players you trust. In
+`plugins/SyrkBuilder/config.yml`, `enabled` switches the plugin off, `require-creative` (on by default) refuses
+players who aren't in creative mode, and the limits (edit size, blocks per tick, history size, upload size, script
+time) are there too.
