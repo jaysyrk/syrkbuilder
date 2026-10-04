@@ -41,8 +41,8 @@ current tool. Middle-click copies the block you aim at into the tool's Blocks fi
 | Tool | What it does |
 |---|---|
 | Shapes | sphere, ellipsoid, dome, cylinder, cone, pyramid, circle, disc, torus, helix, text, arch |
-| Terrain | 8 generators with radius, height, erosion, roughness, peaks, style and seed; snow, thaw, green, drain; biome painting |
-| Brushes | 30 brushes in three groups: blocks (including a clipboard stamp, boulders and cliffs), sculpting and terrain (including a noise terrain generator and erosion) |
+| Terrain | 15 generators (mountain, hills, mesa, volcano, crater, canyon, dunes, island, buttes, valley with a river, fjord, lake, atoll, archipelago, swamp) with radius, height, erosion, roughness, peaks, style and seed; snow, thaw, green, drain; biome painting |
+| Brushes | 31 brushes in three groups: blocks (including a clipboard stamp, boulders and cliffs), sculpting and terrain (including a noise terrain generator and erosion) |
 | Fill | hole (fills to the brim), connected (paint bucket), room (enclosed 3D) |
 | Trees | oak, birch, spruce, pine, jungle, dark oak, acacia, cherry, willow, palm, dead, swamp, and a forest brush |
 | Paths | drag or click points, then build a road, wall, tunnel, river, bridge or line |
@@ -76,11 +76,13 @@ paints a flat disc. In the editor, turn on Stretch per axis.
 - `preset=` sets all of that at once and gives the new ground matching surface blocks: `alpine`, `rolling`, `dunes`,
   `mesa`, `islands` or `craggy`, e.g. `/sb brush terragen 30 preset=alpine`. `style=` picks other surface blocks
   (`alpine`, `grassy`, `desert`, `mesa`, `volcanic`, `rocky`, `snowy`)
+- `/sb brush lake 12 strength=6` digs a bowl and floods it with water up to the height you aim at, with a sandy bed
 - `/sb brush erode 20 strength=0.5` runs water and slope erosion over what is there: gullies, loose scree and softened
   peaks without flattening them
 - `/sb brush boulder 4 stone,andesite ry=3` sets a lumpy rock into the ground (`strength=` is how rough, `rx= ry= rz=`
   its size). `/sb brush cliff 8 stone,andesite,granite depth=3` stacks those blocks as strata layers on steep faces and
   juts out ledges (`depth=` is the layer height, `strength=` how many ledges)
+- `/sb terrain archipelago`, `atoll`, `lake`, `fjord`, `valley` and `swamp` fill their low ground with water up to the height of the ground at the centre. New `coastal` and `swamp` styles give them sand, gravel, mud and moss. `/sb terrain list` shows all of them
 - Noise masks make any edit land only in organic patches. `/sb mask fractal:8:0.4` is fractal patches 8 blocks across
   covering 40%, `cell:6:0.5` fills half of the voronoi cells, `voronoi:8:0.15` and `crack:6:0.12` are cell borders and
   cracks, `ygradient:60:90` thins out from y=60 to y=90, and `!` flips any of them. Add `:3d` for patterns that change

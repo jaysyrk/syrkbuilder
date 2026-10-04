@@ -15,6 +15,7 @@ public final class TerrainJob implements EditStream {
     private final int cy;
     private final int cz;
     private final WorldView world;
+    private final String fluidBlock;
 
     private int count;
     private int[] colX;
@@ -41,6 +42,7 @@ public final class TerrainJob implements EditStream {
         this.cy = cy;
         this.cz = cz;
         this.world = world;
+        this.fluidBlock = params.type.fluidBlock();
     }
 
     public TerrainJob prepare() {
@@ -75,6 +77,7 @@ public final class TerrainJob implements EditStream {
         double scale = maxAbs > 0 ? params.height / maxAbs : 0;
 
         Heightfield groundHf = new Heightfield(minX, minZ, size, size);
+        int sea = world.groundY(cx, cz);
         Heightfield surface = new Heightfield(minX, minZ, size, size);
         for (int j = 0; j < size; j++) {
             for (int i = 0; i < size; i++) {
@@ -103,7 +106,10 @@ public final class TerrainJob implements EditStream {
                 int g = (int) groundHf.get(i, j);
                 int t = clampY((int) Math.round(surface.get(i, j)));
                 double f = rawFluid[j * size + i];
-                int fl = Double.isNaN(f) ? Integer.MIN_VALUE : clampY((int) Math.round(g + f * scale));
+                int fl = Double.isNaN(f) ? Integer.MIN_VALUE : clampY((int) Math.round((params.type.water() ? sea : g) + f * scale));
+                if (params.type.water() && fl != Integer.MIN_VALUE && t >= fl) {
+                    t = fl - 1;
+                }
                 boolean changed = t != g || (fl != Integer.MIN_VALUE && fl > t);
                 if (!changed) {
                     continue;
@@ -226,7 +232,7 @@ public final class TerrainJob implements EditStream {
                 if (y <= top[k]) {
                     block = style.block(column, y, top[k] - y);
                 } else if (fluid[k] != Integer.MIN_VALUE && y <= fluid[k]) {
-                    block = "minecraft:lava";
+                    block = fluidBlock;
                 } else {
                     block = AIR;
                 }

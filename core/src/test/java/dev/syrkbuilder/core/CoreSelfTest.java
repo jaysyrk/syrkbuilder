@@ -385,13 +385,17 @@ public final class CoreSelfTest {
                 lowest = Math.min(lowest, y);
             }
             switch (type) {
-                case CRATER, CANYON -> check(type.id() + " digs down", lowest < 64 - p.height / 2, lowest);
+                case CRATER, CANYON, LAKE, FJORD -> check(type.id() + " digs down", lowest < 64 - p.height / 2, lowest);
+                case ATOLL, ARCHIPELAGO, SWAMP -> check(type.id() + " has land above the water line", highest >= 64 && lowest < 64, lowest + ".." + highest);
                 case ISLAND -> check("island floats around y=100", highest > 100 && lowest < 100 && lowest > 64, lowest + ".." + highest);
                 default -> check(type.id() + " peak near requested height", highest > 64 + p.height * 0.6 && highest <= 64 + p.height + 2,
                     highest + " for height " + p.height);
             }
             boolean cornerUntouched = !w.blocks.containsKey(FlatWorld.key(-p.radius - 1, 64, -p.radius - 1));
-            check(type.id() + " leaves far corner alone", cornerUntouched || type == TerrainType.CANYON, "");
+            check(type.id() + " leaves far corner alone", cornerUntouched || type == TerrainType.CANYON || type == TerrainType.FJORD || type == TerrainType.VALLEY, "");
+            if (type.water()) {
+                check(type.id() + " floods its low ground with water", w.blocks.containsValue("minecraft:water"), "");
+            }
         }
         FlatWorld w = new FlatWorld(64);
         TerrainParams p = new TerrainParams();
@@ -1388,6 +1392,12 @@ public final class CoreSelfTest {
             }
         }
         check("terrain brushes see mountains taller than 2r above the aim", peak > 112 && solid, peak + " " + solid);
+
+        FlatWorld pond = meadow();
+        pond.run(brush(pond, "brush lake 8 strength=5", new int[]{0, 64, 0}).stream());
+        check("lake brush digs a bowl and floods it to the aim height", pond.blockId(0, 64, 0).equals("minecraft:water") && pond.blockId(0, 61, 0).equals("minecraft:water")
+            && pond.blockState(0, 59, 0).equals("minecraft:sand") && pond.blockId(12, 64, 0).equals("minecraft:grass_block"), pond.blockId(0, 64, 0) + " " + pond.blockState(0, 59, 0));
+        check("lake brush leaves a shore", topAt(pond, 6, 0) >= 63, topAt(pond, 6, 0));
 
         FlatWorld rock = meadow();
         rock.run(brush(rock, "brush boulder 4 stone ry=3 seed=1", new int[]{0, 64, 0}).stream());

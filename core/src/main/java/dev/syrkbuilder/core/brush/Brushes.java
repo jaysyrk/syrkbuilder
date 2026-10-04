@@ -210,11 +210,18 @@ public final class Brushes {
                     case NOISE -> old + noise.fbm(x / scale, z / scale, 3, 2.0, 0.5) * s.strength() * f;
                     case TERRAGEN -> old + (cy + generated(s, field, kind, octaves, steps, lift, scale, x, z) - old) * f;
                     case CRATER -> old + crater(flat) * s.strength();
+                    case LAKE -> old - Math.pow(Math.max(0, 1 - flat * flat), 1.5) * s.strength();
                     case TERRACE -> f > 0.15 ? cy + Math.floor((old - cy) / Math.max(1, s.strength()) + 0.5) * Math.max(1, s.strength()) : old;
                     case SMOOTH -> old + (target.get(i, j) - old) * f;
                     default -> old + (target.get(i, j) - old) * f;
                 };
                 int to = moveColumn(world, x, z, (int) old, (int) Math.round(want), out);
+                if (s.type() == BrushType.LAKE && to < cy) {
+                    for (int y = to + 1; y <= cy; y++) {
+                        out.set(x, y, z, "minecraft:water");
+                    }
+                    out.set(x, to, z, "minecraft:sand");
+                }
                 result.set(i, j, to);
                 moved[j * sizeX + i] = true;
             }

@@ -15,7 +15,7 @@ public abstract class TerrainStyle {
 
     public abstract String block(Column c, int y, int depth);
 
-    public static final List<String> NAMES = List.of("alpine", "grassy", "desert", "mesa", "volcanic", "rocky", "snowy");
+    public static final List<String> NAMES = List.of("alpine", "grassy", "desert", "mesa", "volcanic", "rocky", "snowy", "coastal", "swamp");
 
     public static TerrainStyle byName(String name) {
         switch (name == null ? "" : name.toLowerCase(Locale.ROOT)) {
@@ -26,6 +26,8 @@ public abstract class TerrainStyle {
             case "volcanic": return VOLCANIC;
             case "rocky": return ROCKY;
             case "snowy": return SNOWY;
+            case "coastal": return COASTAL;
+            case "swamp": return SWAMP;
             default: return null;
         }
     }
@@ -130,6 +132,44 @@ public abstract class TerrainStyle {
                 return "minecraft:snow_block";
             }
             return depth == 0 && rand(c.x, y, c.z) < 0.25 ? "minecraft:packed_ice" : pick(c.x, y, c.z, ROCK);
+        }
+    };
+
+    static final TerrainStyle COASTAL = new TerrainStyle() {
+        @Override
+        public String block(Column c, int y, int depth) {
+            double low = c.heightFrac < 0.02 ? 1 : 0;
+            if (depth == 0) {
+                if (low > 0) {
+                    double r = rand(c.x, y, c.z);
+                    return r < 0.2 ? "minecraft:gravel" : r < 0.3 ? "minecraft:clay" : "minecraft:sand";
+                }
+                if (c.slope >= 2.2) {
+                    return pick(c.x, y, c.z, ROCK);
+                }
+                return c.heightFrac < 0.14 ? "minecraft:sand" : "minecraft:grass_block";
+            }
+            if (c.slope >= 2.2 && depth > 1) {
+                return pick(c.x, y, c.z, ROCK);
+            }
+            if (depth < 4) {
+                return low > 0 || c.heightFrac < 0.14 ? "minecraft:sand" : "minecraft:dirt";
+            }
+            return depth < 7 && c.heightFrac < 0.14 ? "minecraft:sandstone" : "minecraft:stone";
+        }
+    };
+
+    static final TerrainStyle SWAMP = new TerrainStyle() {
+        @Override
+        public String block(Column c, int y, int depth) {
+            if (depth == 0) {
+                if (c.heightFrac < 0.02) {
+                    return rand(c.x, y, c.z) < 0.3 ? "minecraft:clay" : "minecraft:mud";
+                }
+                double r = rand(c.x, y, c.z);
+                return r < 0.25 ? "minecraft:mud" : r < 0.4 ? "minecraft:moss_block" : r < 0.5 ? "minecraft:podzol" : "minecraft:grass_block";
+            }
+            return depth < 4 ? (c.heightFrac < 0.1 ? "minecraft:mud" : "minecraft:dirt") : "minecraft:stone";
         }
     };
 }
