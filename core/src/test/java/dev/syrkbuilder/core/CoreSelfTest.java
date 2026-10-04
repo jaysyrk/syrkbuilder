@@ -58,6 +58,7 @@ public final class CoreSelfTest {
         brushes();
         noiseTerrain();
         noiseMasks();
+        viewRays();
         gradients();
         schematics();
         treesAndPaths();
@@ -1486,6 +1487,27 @@ public final class CoreSelfTest {
             }
         }
         return hits / (double) total;
+    }
+
+    private static void viewRays() {
+        double[] forward = {0, 0, -1};
+        double[] left = {-1, 0, 0};
+        double[] up = {0, 1, 0};
+        double[] centre = dev.syrkbuilder.core.edit.ViewRay.direction(forward, left, up, 70, 16 / 9.0, 0, 0);
+        check("a click in the middle of the screen aims straight ahead", Math.abs(centre[0]) < 1e-9 && Math.abs(centre[1]) < 1e-9 && Math.abs(centre[2] + 1) < 1e-9, java.util.Arrays.toString(centre));
+        double[] top = dev.syrkbuilder.core.edit.ViewRay.direction(forward, left, up, 70, 16 / 9.0, 0, 1);
+        double angle = Math.toDegrees(Math.atan2(top[1], -top[2]));
+        check("the top edge is half the vertical field of view up", Math.abs(angle - 35) < 1e-6, angle);
+        double[] right = dev.syrkbuilder.core.edit.ViewRay.direction(forward, left, up, 70, 2.0, 1, 0);
+        double rightAngle = Math.toDegrees(Math.atan2(right[0], -right[2]));
+        check("the right edge is to the player's right and widens with the aspect ratio", right[0] > 0 && Math.abs(Math.tan(Math.toRadians(rightAngle)) - Math.tan(Math.toRadians(35)) * 2.0) < 1e-6, rightAngle);
+        double[] below = dev.syrkbuilder.core.edit.ViewRay.direction(forward, left, up, 70, 1.0, 0, -0.5);
+        double[] lefty = dev.syrkbuilder.core.edit.ViewRay.direction(forward, left, up, 70, 1.0, -0.5, 0);
+        check("below the middle aims down and left of the middle aims left", below[1] < 0 && Math.abs(below[0]) < 1e-9 && lefty[0] < 0 && Math.abs(lefty[1]) < 1e-9, "");
+        double[] east = dev.syrkbuilder.core.edit.ViewRay.direction(new double[]{1, 0, 0}, new double[]{0, 0, -1}, up, 90, 1.0, 1, 0);
+        check("it follows the camera when facing east", Math.abs(east[0] - east[2]) < 1e-9 && east[2] > 0, java.util.Arrays.toString(east));
+        double len = Math.sqrt(top[0] * top[0] + top[1] * top[1] + top[2] * top[2]);
+        check("rays are unit length", Math.abs(len - 1) < 1e-9, len);
     }
 
     private static void noiseMasks() {

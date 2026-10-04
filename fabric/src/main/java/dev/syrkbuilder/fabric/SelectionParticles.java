@@ -29,6 +29,12 @@ final class SelectionParticles {
                 client.level.addParticle(ParticleTypes.FLAME, c[0], c[1] + 1.1, c[2], 0, 0, 0);
             }
         }
+        if (SyrkBuilderClient.cursorAim() && client.gui.screen() instanceof EditorScreen) {
+            BlockPos aimed = SyrkBuilderClient.lookedAt(client.player);
+            if (aimed != null) {
+                box(client.level, aimed.getX(), aimed.getY(), aimed.getZ(), aimed.getX() + 1, aimed.getY() + 1, aimed.getZ() + 1, ParticleTypes.ELECTRIC_SPARK);
+            }
+        }
         BlockPos a = Selection.pos1();
         BlockPos b = Selection.pos2();
         if (a == null && b == null || !Settings.selectionParticles) {

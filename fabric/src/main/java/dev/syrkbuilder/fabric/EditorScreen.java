@@ -1324,6 +1324,7 @@ final class EditorScreen extends Screen {
             }
         }
         if (event.button() == 0 && inViewport(event.x(), event.y())) {
+            SyrkBuilderClient.cursor(event.x(), event.y(), width, height);
             usePrimary();
             return true;
         }
@@ -1450,6 +1451,7 @@ final class EditorScreen extends Screen {
     }
 
     private void startLook() {
+        SyrkBuilderClient.clearCursor();
         long window = GLFW.glfwGetCurrentContext();
         if (window == 0L) {
             return;
@@ -1520,6 +1522,7 @@ final class EditorScreen extends Screen {
 
     @Override
     public void removed() {
+        SyrkBuilderClient.clearCursor();
         stopLook();
         EditorMovement.release();
         super.removed();
@@ -1588,6 +1591,11 @@ final class EditorScreen extends Screen {
         if (clearFocus) {
             clearFocus = false;
             setFocused(null);
+        }
+        if (looking) {
+            SyrkBuilderClient.clearCursor();
+        } else if (inViewport(mouseX, mouseY) && (picker == null || !picker.contains(mouseX, mouseY))) {
+            SyrkBuilderClient.cursor(mouseX, mouseY, width, height);
         }
         if (looking) {
             updateLook();
