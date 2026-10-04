@@ -56,7 +56,7 @@ public final class SyrkBuilderClient implements ClientModInitializer {
 
 
     private static final KeyMapping.Category KEY_CATEGORY = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("syrkbuilder", "main"));
-    private static final boolean SERVER_SUPPORT = false;
+    private static final boolean SERVER_SUPPORT = true;
 
     private static KeyMapping editorKey;
     private static KeyMapping noclipKey;
@@ -561,7 +561,8 @@ public final class SyrkBuilderClient implements ClientModInitializer {
                 return "This server doesn't have the SyrkBuilder plugin - edits need it installed.";
             }
         }
-        return player.isCreative() ? null : "SyrkBuilder only works in creative mode.";
+        boolean noclipping = !LocalBackend.active() && player.isSpectator();
+        return player.isCreative() || noclipping ? null : "SyrkBuilder only works in creative mode.";
     }
 
     static boolean available() {
