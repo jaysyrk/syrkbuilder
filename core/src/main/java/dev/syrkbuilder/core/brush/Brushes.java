@@ -39,7 +39,7 @@ public final class Brushes {
             case SPHERE, ERASE, PAINT, REPLACE, FILL -> ball(s, world, cx, cy, cz, out);
             case OVERLAY, SCATTER -> surface(s, world, cx, cy, cz, out);
             case SPIKES -> spikes(s, world, cx, cy, cz, out);
-            case BOULDER, CLIFF -> Rocks.apply(s, world, cx, cy, cz, out);
+            case BOULDER, CLIFF, ROCKARCH, CAVES -> Rocks.apply(s, world, cx, cy, cz, out);
             case TREES -> forest(s, world, cx, cy, cz, out);
             case BLOB, CARVE, SCULPT, INFLATE, DEFLATE, ROUGHEN, DECAY, SPLATTER -> VoxelBrushes.apply(s, world, cx, cy, cz, out);
             default -> terrain(s, world, cx, cy, cz, out);

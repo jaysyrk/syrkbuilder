@@ -1410,6 +1410,43 @@ public final class CoreSelfTest {
         rough.run(brush(rough, "brush boulder 4 stone ry=3 seed=1 strength=1", new int[]{0, 64, 0}).stream());
         check("boulder roughness changes the shape", !surface(rough, 8).equals(surface(rock, 8)), "");
 
+        FlatWorld arch = meadow();
+        arch.run(brush(arch, "brush rockarch 6 stone rx=8 ry=6 rz=2 seed=1", new int[]{0, 64, 0}).stream());
+        boolean keystone = false;
+        for (int y = 68; y <= 72; y++) {
+            keystone |= arch.blockId(0, y, 0).equals("minecraft:stone");
+        }
+        check("rock arch has legs, a keystone and an opening", keystone && arch.blockId(8, 65, 0).equals("minecraft:stone") && arch.blockId(-8, 65, 0).equals("minecraft:stone")
+            && arch.blockId(0, 66, 0).endsWith("air") && arch.blockId(0, 65, 0).endsWith("air"), arch.blockId(8, 65, 0) + " " + arch.blockId(0, 66, 0));
+        check("rock arch stays inside its size", arch.blockId(0, 66, 12).endsWith("air") && arch.blockId(14, 65, 0).endsWith("air"), "");
+        FlatWorld archZ = meadow();
+        archZ.run(brush(archZ, "brush rockarch 6 stone rx=2 ry=6 rz=8 seed=1", new int[]{0, 64, 0}).stream());
+        check("rock arch runs along the longer axis", archZ.blockId(0, 65, 8).equals("minecraft:stone") && archZ.blockId(0, 66, 0).endsWith("air"), "");
+        FlatWorld arch2 = meadow();
+        arch2.run(brush(arch2, "brush rockarch 6 stone rx=8 ry=6 rz=2 seed=1", new int[]{0, 64, 0}).stream());
+        check("rock arch is repeatable with a seed", surface(arch2, 12).equals(surface(arch, 12)), "");
+
+        FlatWorld ground = new FlatWorld(64);
+        ground.run(brush(ground, "brush caves 10 strength=0.25 seed=3", new int[]{0, 50, 0}).stream());
+        int hollow = 0;
+        int total = 0;
+        for (int x = -7; x <= 7; x++) {
+            for (int y = 43; y <= 57; y++) {
+                for (int z = -7; z <= 7; z++) {
+                    total++;
+                    hollow += ground.blockId(x, y, z).endsWith("air") ? 1 : 0;
+                }
+            }
+        }
+        check("caves carve tunnels through solid ground", hollow > total / 25 && hollow < total * 0.7, hollow + " of " + total);
+        check("caves stay inside the brush", ground.blockId(0, 50, 13).equals("minecraft:stone") && ground.blockId(13, 50, 0).equals("minecraft:stone"), "");
+        FlatWorld ground2 = new FlatWorld(64);
+        ground2.run(brush(ground2, "brush caves 10 strength=0.25 seed=3", new int[]{0, 50, 0}).stream());
+        check("caves are repeatable with a seed", ground2.blocks.equals(ground.blocks), "");
+        FlatWorld wide = new FlatWorld(64);
+        wide.run(brush(wide, "brush caves 10 strength=0.4 seed=3", new int[]{0, 50, 0}).stream());
+        check("wider caves carve more", wide.blocks.size() > ground.blocks.size(), wide.blocks.size() + " vs " + ground.blocks.size());
+
         FlatWorld cliff = meadow();
         for (int x = 0; x <= 10; x++) {
             for (int z = -10; z <= 10; z++) {

@@ -23,8 +23,10 @@ Downloads are on Modrinth and on the Releases page.
   it, Enter keeps it.
 - **Click and drag to build.** Left-click places at the crosshair; hold and drag to keep placing. A whole drag
   is one undo step, and it doesn't flood your chat.
-- **Terrain in one click.** Mountains, hills, mesas, volcanoes, craters, canyons, dunes and islands, with
-  erosion and styles. Or turn any greyscale image into terrain, and paint biomes on top.
+- **Terrain in one click.** Fifteen generators: mountains, hills, mesas, volcanoes, craters, canyons, dunes,
+  floating islands, buttes, valleys with a river, fjords, lakes, atolls, archipelagos and swamps, with erosion and
+  styles. Brushes grow terrain from noise, erode it, and add boulders, cliffs, rock arches and caves. Or turn any
+  greyscale image into terrain, and paint biomes on top.
 - **Select smarter.** Magic select grabs a whole build by clicking it. Move it, stack it, hollow it, smooth it.
 - **Works with your other tools.** Opens and saves WorldEdit, FAWE and Axiom `.schem` files and Litematica
   `.litematic` files, and picks up your WorldEdit and Litematica schematic folders automatically.
@@ -42,7 +44,7 @@ current tool. Middle-click copies the block you aim at into the tool's Blocks fi
 |---|---|
 | Shapes | sphere, ellipsoid, dome, cylinder, cone, pyramid, circle, disc, torus, helix, text, arch |
 | Terrain | 15 generators (mountain, hills, mesa, volcano, crater, canyon, dunes, island, buttes, valley with a river, fjord, lake, atoll, archipelago, swamp) with radius, height, erosion, roughness, peaks, style and seed; snow, thaw, green, drain; biome painting |
-| Brushes | 31 brushes in three groups: blocks (including a clipboard stamp, boulders and cliffs), sculpting and terrain (including a noise terrain generator and erosion) |
+| Brushes | 33 brushes in three groups: blocks (including a clipboard stamp, boulders and cliffs), sculpting and terrain (including a noise terrain generator and erosion) |
 | Fill | hole (fills to the brim), connected (paint bucket), room (enclosed 3D) |
 | Trees | oak, birch, spruce, pine, jungle, dark oak, acacia, cherry, willow, palm, dead, swamp, and a forest brush |
 | Paths | drag or click points, then build a road, wall, tunnel, river, bridge or line |
@@ -79,6 +81,7 @@ paints a flat disc. In the editor, turn on Stretch per axis.
 - `/sb brush lake 12 strength=6` digs a bowl and floods it with water up to the height you aim at, with a sandy bed
 - `/sb brush erode 20 strength=0.5` runs water and slope erosion over what is there: gullies, loose scree and softened
   peaks without flattening them
+- `/sb brush rockarch 8 stone,andesite rx=12 ry=9 rz=3` builds a natural arch (the longer of `rx`/`rz` is the span). `/sb brush caves 14 strength=0.2` carves winding tunnels through solid ground (`strength=` is the tunnel width)
 - `/sb brush boulder 4 stone,andesite ry=3` sets a lumpy rock into the ground (`strength=` is how rough, `rx= ry= rz=`
   its size). `/sb brush cliff 8 stone,andesite,granite depth=3` stacks those blocks as strata layers on steep faces and
   juts out ledges (`depth=` is the layer height, `strength=` how many ledges)
@@ -148,6 +151,10 @@ fill(x1, y1, z1, x2, y2, z2, blocks)   sphere(x, y, z, r, blocks, hollow)
 cylinder(x, y, z, r, h, blocks, hollow) line(x1, y1, z1, x2, y2, z2, blocks, radius)
 noise(x, z, scale)                     rand()                  print(...)
 ```
+
+## Known limits
+
+SyrkBuilder works in singleplayer worlds in creative mode only. Servers and survival are switched off for now.
 
 ## Servers (coming soon)
 

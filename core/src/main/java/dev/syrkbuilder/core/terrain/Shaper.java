@@ -250,9 +250,13 @@ final class Shaper {
 
     private double valley(double dx, double dz) {
         double rad = Math.toRadians(p.angle);
-        double along = Math.abs(dx * -Math.sin(rad) + dz * Math.cos(rad)) / p.radius;
-        double across = Math.abs(dx * Math.cos(rad) - dz * -Math.sin(rad));
-        if (along >= 1 || across >= p.radius + p.width) {
+        double warpScale = p.radius * 0.5;
+        double wx = dx + 0.12 * p.radius * warp.noise(dx / warpScale + 5.5, dz / warpScale);
+        double wz = dz + 0.12 * p.radius * warp.noise(dx / warpScale, dz / warpScale - 9.1);
+        double along = Math.abs(wx * -Math.sin(rad) + wz * Math.cos(rad)) / p.radius;
+        double sides = Math.abs(wx * Math.cos(rad) - wz * -Math.sin(rad)) / (p.radius + p.width);
+        double outline = Math.sqrt(along * along + sides * sides);
+        if (outline >= 1) {
             return 0;
         }
         double d = valleyAcross(dx, dz);
@@ -260,9 +264,7 @@ final class Shaper {
         double ridged = noise.ridged(dx / scale, dz / scale, 4, 2.0, 0.45 + p.roughness * 0.2);
         double wall = smoothstep(p.width * 0.35, p.radius * 0.75, d);
         double h = wall * (0.55 + 0.45 * ridged) - 0.1 * channel(dx, dz);
-        double ends = 1 - smoothstep(0.8, 1.0, along);
-        double sides = 1 - smoothstep(0.75, 1.0, across / (p.radius + p.width));
-        return h * ends * sides;
+        return h * (1 - smoothstep(0.62, 1.0, outline));
     }
 
     private double lake(double dx, double dz) {
