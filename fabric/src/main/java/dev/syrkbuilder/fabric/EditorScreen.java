@@ -182,6 +182,11 @@ final class EditorScreen extends Screen {
         elements.clear();
         Minecraft mc = Minecraft.getInstance();
         target = mc.player == null ? null : SyrkBuilderClient.lookedAt(mc.player);
+        if (Settings.aimPointer && !Settings.aimHintSeen) {
+            Settings.aimHintSeen = true;
+            Settings.save();
+            StatusLine.set("§7Left-click uses the block under your pointer. Hold right-click to look around. (Settings → Aim at)");
+        }
 
         int x = width - 6;
         x = topButton(x, "✕", "Close (Esc)", this::onClose);
@@ -984,6 +989,13 @@ final class EditorScreen extends Screen {
         double[] speeds = {0.5, 1, 1.5, 2, 3, 4};
         p.segments("Fly speed", new String[]{"½", "1x", "1.5", "2x", "3x", "4x"}, nearest(speeds, Settings.flySpeed), v -> {
             Settings.flySpeed = speeds[v];
+            Settings.save();
+        });
+        p.segments("Aim at", new String[]{"pointer", "crosshair"}, Settings.aimPointer ? 0 : 1, v -> {
+            Settings.aimPointer = v == 0;
+            if (!Settings.aimPointer) {
+                SyrkBuilderClient.clearCursor();
+            }
             Settings.save();
         });
         double[] looks = {0.5, 0.75, 1, 1.5, 2};
