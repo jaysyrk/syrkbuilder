@@ -25,7 +25,7 @@ final class Shaper {
     }
 
     int extent() {
-        return p.type == TerrainType.CANYON ? p.radius + p.width : p.radius + 2;
+        return p.type == TerrainType.CANYON || p.type == TerrainType.FJORD || p.type == TerrainType.VALLEY ? p.radius + p.width : p.radius + 2;
     }
 
     double height(double dx, double dz) {
@@ -35,8 +35,15 @@ final class Shaper {
             case MESA: return mesa(dx, dz);
             case VOLCANO: return volcano(dx, dz);
             case CRATER: return crater(dx, dz);
-            case CANYON: return canyon(dx, dz);
+            case CANYON: return canyon(dx, dz, true);
             case DUNES: return dunes(dx, dz);
+            case BUTTES: return buttes(dx, dz);
+            case VALLEY: return valley(dx, dz);
+            case FJORD: return canyon(dx, dz, false);
+            case LAKE: return lake(dx, dz);
+            case ATOLL: return atoll(dx, dz);
+            case ARCHIPELAGO: return archipelago(dx, dz);
+            case SWAMP: return swamp(dx, dz);
             default: return islandTop(dx, dz);
         }
     }
@@ -48,7 +55,16 @@ final class Shaper {
                 return coneAt(CRATER_FRAC) - craterDepth() * 0.55;
             }
         }
-        return Double.NaN;
+        boolean wet = switch (p.type) {
+            case FJORD -> canyon(dx, dz, false) < -0.03;
+            case LAKE -> lake(dx, dz) < -0.04;
+            case ATOLL -> warpedDistance(dx, dz, 0.15) < 0.98 && atoll(dx, dz) < 0.03;
+            case ARCHIPELAGO -> warpedDistance(dx, dz, 0.3) < 0.98 && archipelago(dx, dz) < 0.04;
+            case SWAMP -> warpedDistance(dx, dz, 0.2) < 0.97 && pools(dx, dz) > 0.5;
+            case VALLEY -> channel(dx, dz) > 0.05;
+            default -> false;
+        };
+        return wet ? 0 : Double.NaN;
     }
 
     private double warpedDistance(double dx, double dz, double amount) {
@@ -163,7 +179,7 @@ final class Shaper {
         return (bowl + rim + n) * (1 - smoothstep(0.9, 1.0, d));
     }
 
-    private double canyon(double dx, double dz) {
+    private double canyon(double dx, double dz, boolean steps) {
         double rad = Math.toRadians(p.angle);
         double ax = -Math.sin(rad);
         double az = Math.cos(rad);
@@ -180,7 +196,7 @@ final class Shaper {
             return 0;
         }
         double wall = 1 - smoothstep(half * 0.6, half * 1.6, dist);
-        double stepped = terrace(wall, Math.max(2, p.steps));
+        double stepped = steps ? terrace(wall, Math.max(2, p.steps)) : wall;
         double ends = 1 - smoothstep(0.75, 1.0, t);
         return -stepped * ends;
     }
@@ -196,6 +212,108 @@ final class Shaper {
         double phase = (u + wobble) / p.width;
         double wave = 0.5 + 0.5 * Math.sin(phase * Math.PI * 2);
         return bell(base) * (0.18 + 0.82 * Math.pow(wave, 1.6));
+    }
+
+    private double buttes(double dx, double dz) {
+        double base = warpedDistance(dx, dz, 0.2);
+        if (base >= 1) {
+            return 0;
+        }
+        double scale = p.radius * 0.28;
+        double n = 0.5 + 0.5 * noise.fbm(dx / scale, dz / scale, 3, 2.0, 0.5);
+        double edge = 0.74 - 0.03 * p.peaks;
+        double pillar = smoothstep(edge, edge + 0.018, n);
+        double top = 0.72 + 0.28 * (0.5 + 0.5 * noise.noise(dx / (scale * 2.4) + 31.7, dz / (scale * 2.4)));
+        double h = 0.1 * n + pillar * top;
+        return h * (1 - smoothstep(0.82, 1.0, base));
+    }
+
+    private double valleyAcross(double dx, double dz) {
+        double rad = Math.toRadians(p.angle);
+        double ax = -Math.sin(rad);
+        double az = Math.cos(rad);
+        double along = dx * ax + dz * az;
+        double across = dx * az - dz * ax;
+        double meander = p.width * 1.1 * noise.fbm(along / (p.radius * 0.45), 8.3, 3, 2.0, 0.5);
+        return Math.abs(across - meander);
+    }
+
+    private double channel(double dx, double dz) {
+        double rad = Math.toRadians(p.angle);
+        double along = Math.abs(dx * -Math.sin(rad) + dz * Math.cos(rad)) / p.radius;
+        if (along >= 1) {
+            return 0;
+        }
+        double river = Math.max(2.0, p.width * 0.28);
+        return (1 - smoothstep(0, river, valleyAcross(dx, dz))) * (1 - smoothstep(0.85, 1.0, along));
+    }
+
+    private double valley(double dx, double dz) {
+        double rad = Math.toRadians(p.angle);
+        double along = Math.abs(dx * -Math.sin(rad) + dz * Math.cos(rad)) / p.radius;
+        double across = Math.abs(dx * Math.cos(rad) - dz * -Math.sin(rad));
+        if (along >= 1 || across >= p.radius + p.width) {
+            return 0;
+        }
+        double d = valleyAcross(dx, dz);
+        double scale = p.radius * 0.3;
+        double ridged = noise.ridged(dx / scale, dz / scale, 4, 2.0, 0.45 + p.roughness * 0.2);
+        double wall = smoothstep(p.width * 0.35, p.radius * 0.75, d);
+        double h = wall * (0.55 + 0.45 * ridged) - 0.1 * channel(dx, dz);
+        double ends = 1 - smoothstep(0.8, 1.0, along);
+        double sides = 1 - smoothstep(0.75, 1.0, across / (p.radius + p.width));
+        return h * ends * sides;
+    }
+
+    private double lake(double dx, double dz) {
+        double d = warpedDistance(dx, dz, 0.25);
+        if (d >= 1) {
+            return 0;
+        }
+        double bowl = d < 0.78 ? -Math.pow(1 - (d / 0.78) * (d / 0.78), 1.4) : 0;
+        double rim = 0.07 * Math.exp(-Math.pow((d - 0.86) / 0.08, 2));
+        double n = 0.04 * p.roughness * noise.fbm(dx / 7.0, dz / 7.0, 3, 2.0, 0.5);
+        return (bowl + rim + n) * (1 - smoothstep(0.92, 1.0, d));
+    }
+
+    private double atoll(double dx, double dz) {
+        double d = warpedDistance(dx, dz, 0.15);
+        if (d >= 1) {
+            return 0;
+        }
+        double broken = 0.5 + 0.5 * noise.fbm(dx / (p.radius * 0.25), dz / (p.radius * 0.25), 3, 2.0, 0.5);
+        double ring = Math.exp(-Math.pow((d - 0.62) / 0.1, 2)) * (0.15 + 0.85 * smoothstep(0.28, 0.6, broken));
+        double lagoon = -0.35 * (1 - smoothstep(0.35, 0.52, d));
+        double sea = -0.35 * smoothstep(0.72, 0.9, d);
+        return (0.75 * ring + lagoon + sea) * (1 - smoothstep(0.9, 1.0, d));
+    }
+
+    private double archipelago(double dx, double dz) {
+        double base = warpedDistance(dx, dz, 0.3);
+        if (base >= 1) {
+            return 0;
+        }
+        double scale = p.radius * 0.3;
+        double n = 0.5 + 0.5 * noise.fbm(dx / scale, dz / scale, 4, 2.0, 0.5);
+        double v = n - (0.66 - 0.03 * p.peaks);
+        double h = v > 0 ? 0.12 + 0.6 * Math.pow(Math.min(1, v * 3), 0.9) : Math.max(-0.45, v * 3);
+        return h * (1 - smoothstep(0.88, 1.0, base));
+    }
+
+    private double pools(double dx, double dz) {
+        double scale = p.radius * 0.22;
+        double n = 0.5 + 0.5 * noise.fbm(dx / scale + 14.2, dz / scale - 3.9, 3, 2.0, 0.5);
+        return smoothstep(0.62 - 0.02 * p.peaks, 0.7 - 0.02 * p.peaks, n);
+    }
+
+    private double swamp(double dx, double dz) {
+        double base = warpedDistance(dx, dz, 0.2);
+        if (base >= 1) {
+            return 0;
+        }
+        double hummocks = 0.5 + 0.5 * noise.fbm(dx / 9.0, dz / 9.0, 3, 2.0, 0.5);
+        double h = 0.12 * hummocks - 0.3 * pools(dx, dz);
+        return h * (1 - smoothstep(0.85, 1.0, base));
     }
 
     double islandTop(double dx, double dz) {

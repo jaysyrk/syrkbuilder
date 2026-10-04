@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Seven new terrain generators: `buttes`, `valley` (with a winding river), `fjord`, `lake`, `atoll`, `archipelago` and `swamp`. The wet ones fill their low ground with water
+- Two new terrain styles: `coastal` (sand, gravel, clay, grass) and `swamp` (mud, moss, podzol)
+- Lake brush: digs a bowl and floods it with water up to the height you aim at
 - Terragen brush grows terrain from noise at the height you aim: `/sb brush terragen 20 noise=simplex|fractal|billowy|ridged strength= scale= octaves=`, `-n` for extra fine detail
 - Terragen presets set the noise, size and surface blocks in one go: `preset=alpine|rolling|dunes|mesa|islands|craggy`, or pick surface blocks with `style=`
 - Erode brush: water and slope erosion that carves gullies and softens peaks

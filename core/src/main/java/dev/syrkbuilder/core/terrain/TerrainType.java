@@ -10,7 +10,14 @@ public enum TerrainType {
     CRATER(32, 14, 20, "rocky"),
     CANYON(64, 22, 25, "mesa"),
     DUNES(48, 8, 0, "desert"),
-    ISLAND(24, 14, 25, "grassy");
+    ISLAND(24, 14, 25, "grassy"),
+    BUTTES(56, 28, 4, "mesa"),
+    VALLEY(64, 26, 35, "grassy"),
+    FJORD(64, 30, 25, "rocky"),
+    LAKE(40, 8, 10, "coastal"),
+    ATOLL(48, 8, 0, "coastal"),
+    ARCHIPELAGO(80, 12, 15, "coastal"),
+    SWAMP(48, 4, 0, "swamp");
 
     public final int defaultRadius;
     public final int defaultHeight;
@@ -22,6 +29,17 @@ public enum TerrainType {
         this.defaultHeight = defaultHeight;
         this.defaultErosion = defaultErosion;
         this.defaultStyle = defaultStyle;
+    }
+
+    public boolean water() {
+        return switch (this) {
+            case VALLEY, FJORD, LAKE, ATOLL, ARCHIPELAGO, SWAMP -> true;
+            default -> false;
+        };
+    }
+
+    public String fluidBlock() {
+        return this == VOLCANO ? "minecraft:lava" : "minecraft:water";
     }
 
     public String id() {

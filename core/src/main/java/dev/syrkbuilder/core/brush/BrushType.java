@@ -31,6 +31,7 @@ public enum BrushType {
     MELT(Blocks.NONE, -1, 0, List.of(), "erode sharp edges into slopes"),
     TERRAGEN(Blocks.NONE, 8, 64, List.of("noise", "scale", "octaves", "preset", "style"),
         "grow terrain from noise at the height you aim (noise=simplex|fractal|billowy|ridged, preset=, strength= height, -n adds fine detail)"),
+    LAKE(Blocks.NONE, 4, 64, List.of(), "dig a bowl and flood it with water up to the height you aim (strength= depth)"),
     ERODE(Blocks.NONE, 0.5, 1, List.of(), "water and slope erosion: gullies, scree, softened peaks (strength= 0-1)"),
     BOULDER(Blocks.REQUIRED, 0.4, 1, List.of("scale"), "a lumpy rock sitting on the ground (radius/rx/ry/rz = size, strength= roughness)"),
     CLIFF(Blocks.REQUIRED, 0.5, 1, List.of("depth"), "stack strata layers and ledges onto steep faces (depth= layer height, the blocks cycle as layers)"),
@@ -68,7 +69,7 @@ public enum BrushType {
 
     public boolean terrain() {
         return switch (this) {
-            case RAISE, LOWER, SMOOTH, FLATTEN, NOISE, MELT, CRATER, TERRACE, TERRAGEN, ERODE -> true;
+            case RAISE, LOWER, SMOOTH, FLATTEN, NOISE, MELT, CRATER, TERRACE, TERRAGEN, ERODE, LAKE -> true;
             default -> false;
         };
     }
