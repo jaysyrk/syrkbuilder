@@ -1,9 +1,11 @@
 # Changelog
 
-## Unreleased
+## 1.4.0
 
+- Server support: the mod now works on Paper servers that have the SyrkBuilder plugin. The plugin's jar is attached to every release next to the mod
+- On servers, players need the `syrkbuilder.use` permission and must be in creative mode. Noclip (`syrkbuilder.noclip`) uses spectator mode there, and scripts (`syrkbuilder.script`) run on the server, so only give that to people you trust
+- `plugins/SyrkBuilder/config.yml` has `enabled` to switch the plugin off and `require-creative` to refuse anyone who isn't in creative mode, next to the size, speed and history limits
 - Holding right-click with a bound brush only paints while your aim moves to a new block: keep the cursor or crosshair still and nothing more is placed
-- Servers work again: the mod talks to the SyrkBuilder Paper plugin, which has `enabled` and `require-creative` settings in `config.yml`. Players still have to be in creative mode, and need the `syrkbuilder.use` permission
 
 ## 1.3.1
 
