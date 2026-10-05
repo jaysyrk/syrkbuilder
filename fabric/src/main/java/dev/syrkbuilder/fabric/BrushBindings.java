@@ -21,6 +21,7 @@ final class BrushBindings {
     private static boolean loaded;
     private static int stroke;
     private static int cooldown;
+    private static final dev.syrkbuilder.core.brush.StrokeGate GATE = new dev.syrkbuilder.core.brush.StrokeGate();
 
     private BrushBindings() {
     }
@@ -122,19 +123,25 @@ final class BrushBindings {
             stroke = 0;
             cooldown = 0;
             lastStamp = null;
+            GATE.reset();
             return;
         }
         if (stroke == 0) {
             stroke = ThreadLocalRandom.current().nextInt(1, Integer.MAX_VALUE);
         }
-        if (cooldown-- > 0) {
+        if (cooldown > 0) {
+            cooldown--;
+            return;
+        }
+        BlockPos target = SyrkBuilderClient.lookedAt(player);
+        if (target == null) {
+            GATE.miss();
+            return;
+        }
+        if (!GATE.allow(target.getX(), target.getY(), target.getZ())) {
             return;
         }
         cooldown = DAB_TICKS - 1;
-        BlockPos target = SyrkBuilderClient.lookedAt(player);
-        if (target == null) {
-            return;
-        }
         if (brush.startsWith("stamp")) {
             if (lastStamp != null && Math.sqrt(target.distSqr(lastStamp)) < stampSpacing(brush)) {
                 return;

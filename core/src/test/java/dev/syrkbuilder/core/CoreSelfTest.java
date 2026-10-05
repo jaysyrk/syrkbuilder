@@ -59,6 +59,7 @@ public final class CoreSelfTest {
         noiseTerrain();
         noiseMasks();
         viewRays();
+        strokeGate();
         gradients();
         schematics();
         treesAndPaths();
@@ -1508,6 +1509,19 @@ public final class CoreSelfTest {
         check("it follows the camera when facing east", Math.abs(east[0] - east[2]) < 1e-9 && east[2] > 0, java.util.Arrays.toString(east));
         double len = Math.sqrt(top[0] * top[0] + top[1] * top[1] + top[2] * top[2]);
         check("rays are unit length", Math.abs(len - 1) < 1e-9, len);
+    }
+
+    private static void strokeGate() {
+        dev.syrkbuilder.core.brush.StrokeGate gate = new dev.syrkbuilder.core.brush.StrokeGate();
+        check("the first dab of a stroke is allowed", gate.allow(5, 64, 5), "");
+        check("holding still on the same block places nothing more", !gate.allow(5, 64, 5) && !gate.allow(5, 64, 5), "");
+        check("moving to another block places again", gate.allow(6, 64, 5), "");
+        check("moving up or down a block counts as moving", gate.allow(6, 65, 5) && gate.allow(6, 64, 5), "");
+        gate.allow(7, 64, 5);
+        gate.miss();
+        check("aiming away and back onto the same block places again", gate.allow(7, 64, 5), "");
+        gate.reset();
+        check("a new stroke on the same block places again", gate.allow(7, 64, 5), "");
     }
 
     private static void noiseMasks() {

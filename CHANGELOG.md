@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Holding right-click with a bound brush only paints while your aim moves to a new block: keep the cursor or crosshair still and nothing more is placed
 - Servers work again: the mod talks to the SyrkBuilder Paper plugin, which has `enabled` and `require-creative` settings in `config.yml`. Players still have to be in creative mode, and need the `syrkbuilder.use` permission
 
 ## 1.3.1
