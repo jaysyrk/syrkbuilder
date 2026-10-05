@@ -155,7 +155,7 @@ SyrkBuilder only works in creative mode. On a server it also needs the SyrkBuild
 
 ## Servers
 
-Install the Fabric mod on your client and the SyrkBuilder Paper plugin on a Paper 1.21.11 server. Players need
+Install the Fabric mod on your client and the SyrkBuilder Paper plugin (its jar is attached to each GitHub release) on a Paper server. The plugin is built and tested on Paper 1.21.11; other versions should work but are not tested yet. Players need
 `syrkbuilder.use` and must be in creative mode. Noclip on servers uses spectator mode and needs `syrkbuilder.noclip`.
 Scripts run on the server, so they need `syrkbuilder.script`; only give it to players you trust. In
 `plugins/SyrkBuilder/config.yml`, `enabled` switches the plugin off, `require-creative` (on by default) refuses
